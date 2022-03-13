@@ -1,0 +1,63 @@
+# ------- Integrate datasets -------
+load("../GSE51799/GSE51799_data.RData")
+clinical_data_GSE51799 <- Metadata
+clinical_data_GSE51799$Sex <- gsub(pattern="0", replacement="M", clinical_data_GSE51799$Sex)
+clinical_data_GSE51799$Sex <- gsub(pattern="1", replacement="F", clinical_data_GSE51799$Sex)
+combat_data_GSE51799 <- combat_data
+clinical_data_GSE51799$Sample <-  gsub(pattern=" ", replacement=".", clinical_data_GSE51799$Sample)
+all(colnames(combat_data_GSE51799) == clinical_data_GSE51799$Sample)
+
+load("../GSE61405/GSE61405_data.RData")
+clinical_data$Sample <- as.character(clinical_data$Sample)
+clinical_data_GSE61405 <- clinical_data
+clinical_data_GSE61405$Sex <- as.factor(clinical_data_GSE61405$Sex)
+clinical_data_GSE61405$Age <- as.numeric(clinical_data_GSE61405$Age)
+x_GSE61405 <- x_norm_f
+all(colnames(x_GSE61405) == clinical_data_GSE61405$Sample)
+
+#Common genes
+common_genes <- sort(intersect(rownames(x_GSE61405), rownames(combat_data_GSE51799)))
+blood_dataset <- cbind(combat_data_GSE51799[common_genes,], x_GSE61405[common_genes,])
+
+#Pre-processing
+png(filename = "HD-blood-densities_before.png", width = 800, height = 800)
+plotDensities(blood_dataset, legend=F)
+dev.off()
+blood_dataset_qn <- normalize.quantiles(blood_dataset)
+colnames(blood_dataset_qn) <- colnames(blood_dataset)
+rownames(blood_dataset_qn) <- rownames(blood_dataset)
+png(filename = "HD-blood-densities_after.png", width = 800, height = 800)
+plotDensities(blood_dataset_qn, legend=F)
+dev.off()
+
+blood_clinical <- data.frame(batch=c(rep(1,ncol(combat_data_GSE51799)), rep(2, ncol(x_GSE61405))), disease=c(ifelse(clinical_data_GSE51799$Diagnosis == "control", 1, 2), ifelse(clinical_data_GSE61405$Diagnosis == "Control", 1,2)))
+blood_clinical$Sex <- as.factor(c(clinical_data_GSE51799$Sex, clinical_data_GSE61405$Sex))
+blood_clinical$Age <- c(clinical_data_GSE51799$Age, clinical_data_GSE61405$Age)
+blood_clinical$CAG <- c(clinical_data_GSE51799$CAG, clinical_data_GSE61405$CAG)
+blood_clinical$disease <- as.factor(blood_clinical$disease)
+blood_clinical$batch <- as.factor(blood_clinical$batch)
+rownames(blood_clinical) <- c(clinical_data_GSE51799$Sample, clinical_data_GSE61405$Sample)
+
+#PCA
+blood_dataset_qn_mad <- apply(blood_dataset_qn, 1, mad)
+blood_dataset_qn_pca <- prcomp(blood_dataset_qn[order(blood_dataset_qn_mad, decreasing=T)[1:2000],])
+png("PCA_before_HD-Blood.png", width = 8, height = 8, units = 'in', res = 200)
+plot(x=blood_dataset_qn_pca$rotation[,2], y=blood_dataset_qn_pca$rotation[,1], ylab=paste("PC2 (", round(summary(blood_dataset_qn_pca)$importance[2,2]*100), "%)"), xlab=paste("PC1 (", round(summary(blood_dataset_qn_pca)$importance[2,1]*100), "%)"), pch=19, col=blood_clinical$batch, main="Blood-HD before ComBat")
+legend("topright", legend = c("Batch 1", "Batch 2"), col = c(1, 2), pch = 19, bty = "n", pt.cex = 2, cex = 1.5, inset = c(0.02, 0.02))
+dev.off()
+plot(x=blood_dataset_qn_pca$rotation[,2], y=blood_dataset_qn_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=blood_clinical$disease)
+
+#Combat
+modcombat <- model.matrix(~1, data=data.frame(cmb=blood_clinical$batch))
+blood_dataset_qn_combat <- ComBat(dat=blood_dataset_qn, batch=blood_clinical$batch, mod=modcombat, par.prior=TRUE, prior.plots=FALSE)
+blood_dataset_qn_combat_mad <- apply(blood_dataset_qn_combat , 1, mad)
+blood_dataset_qn_combat_pca <- prcomp(blood_dataset_qn_combat[order(blood_dataset_qn_combat_mad, decreasing=T)[1:2000],])
+png("PCA_after_HD-Blood.png", width = 8, height = 8, units = 'in', res = 200)
+plot(x=blood_dataset_qn_combat_pca$rotation[,2], y=blood_dataset_qn_combat_pca$rotation[,1], ylab=paste("PC2 (", round(summary(blood_dataset_qn_combat_pca)$importance[2,2]*100), "%)"), xlab=paste("PC1 (", round(summary(blood_dataset_qn_combat_pca)$importance[2,1]*100), "%)"), pch=19, col=blood_clinical$batch, main="Blood-HD after ComBat")
+legend("bottomright", legend = c("Batch 1", "Batch 2"), col = c(1, 2), pch = 19, bty = "n", pt.cex = 2, cex = 1.5, inset = c(0.02, 0.02))
+dev.off()
+plot(x=blood_dataset_qn_combat_pca$rotation[,2], y=blood_dataset_qn_combat_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=blood_clinical$disease)
+plot(x=blood_dataset_qn_combat_pca$rotation[,2], y=blood_dataset_qn_combat_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=ifelse(blood_clinical$Sex == 'F', 1, 2))
+
+#Save bloodinson compound dataset
+save(blood_dataset_qn_combat, blood_clinical, file="bloodsHD.RData")
