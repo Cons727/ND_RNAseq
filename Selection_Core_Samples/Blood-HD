@@ -1,0 +1,107 @@
+# -------- Use non negative matrix factorization to identify outliers -f -------
+# Female
+load("bloodsHD_mf.RData")
+library(dplyr)
+source('~/Thesis/Codes/Emmanuels/fileIO.R')
+blood_HD_f_dataset_qn_combat_mad <- apply(blood_f, 1, mad)
+blood_HD_f_for_NMF <- t(apply(blood_f[order(blood_HD_f_dataset_qn_combat_mad, decreasing=T)[1:2000],], 1, scale))
+colnames(blood_HD_f_for_NMF) <- colnames(blood_f)
+write.gct(mat=as.data.frame(blood_HD_f_for_NMF), gct.file = "blood_HD_f_dataset_for_NMF_2000.gct")
+save(blood_HD_f_for_NMF, file="blood_HD_f_dataset_for_NMF_2000.RData")
+
+###
+#NMF
+options(stringsAsFactors=F)
+setwd("NMF")
+source("nmfconsensus.R")
+load("blood_HD_f_dataset_for_NMF_2000.RData")
+
+nmfconsensus(
+  input.ds =           "blood_HD_f_dataset_for_NMF_2000.gct",
+  k.init =             2,
+  k.final =            4,
+  num.clusterings =    100,
+  maxniter =           1000,
+  error.function =     "euclidean",
+  rseed =              1234,
+  stopconv =           40,
+  stopfreq =           10,
+  non.interactive.run = F,
+  doc.string =         "blood_HD_f_",
+  data = 				blood_HD_f_for_NMF)
+###
+
+#Revise clusters
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/Blood/")
+load("bloodsHD_mf.RData")
+nmf_diver_cluster_f <- read.delim("~/Thesis/Avances/Blood/blood_HD_f_membership.gct")
+all(nmf_diver_cluster_f$Name == colnames(blood_f))
+# 1 hay 13 ctl, 33 HD ---- 2 hay 11 ctl, 20 HD, Then 1=HD, 2=CTL
+
+blood_f_mad <- apply(blood_f, 1, mad)
+blood_f_pca <- prcomp(blood_f[order(blood_f_mad, decreasing=T)[1:2000],])
+blood_clinical_f$member_class <- ifelse(blood_clinical_f$disease == 1 & nmf_diver_cluster_f$membership == 2, 1, ifelse(blood_clinical_f$disease == 2 & nmf_diver_cluster_f$membership == 1, 2, 3))
+plot(x=blood_f_pca$rotation[,2], y=blood_f_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=blood_clinical_f$disease)
+plot(x=blood_f_pca$rotation[,2], y=blood_f_pca$rotation[,1], xlab= paste("PC 2 ", summary(blood_f_pca)$importance[2,2] * 100, "%", sep = " "), ylab= paste("PC 1 ", summary(blood_f_pca)$importance[2,1] * 100, "%", sep = " "), pch=19, col=blood_clinical_f$member_class,
+     main = "Blood-HD-f")
+     
+# ------- Use non negative matrix factorization to identify outliers -m -------
+# Male
+load("bloodsHD_mf.RData")
+library(dplyr)
+source('~/Thesis/Codes/Emmanuels/fileIO.R')
+blood_HD_m_dataset_qn_combat_mad <- apply(blood_m, 1, mad)
+blood_HD_m_for_NMF <- t(apply(blood_m[order(blood_HD_m_dataset_qn_combat_mad, decreasing=T)[1:2000],], 1, scale))
+colnames(blood_HD_m_for_NMF) <- colnames(blood_m)
+write.gct(mat=as.data.frame(blood_HD_m_for_NMF), gct.file = "blood_HD_m_dataset_for_NMF_2000.gct")
+save(blood_HD_m_for_NMF, file="blood_HD_m_dataset_for_NMF_2000.RData")
+
+###
+#NMF
+options(stringsAsFactors=F)
+setwd("NMF")
+source("nmfconsensus.R")
+load("blood_HD_m_dataset_for_NMF_2000.RData")
+
+nmfconsensus(
+  input.ds =           "blood_HD_m_dataset_for_NMF_2000.gct",
+  k.init =             2,
+  k.final =            4,
+  num.clusterings =    100,
+  maxniter =           1000,
+  error.function =     "euclidean",
+  rseed =              1234,
+  stopconv =           40,
+  stopfreq =           10,
+  non.interactive.run = F,
+  doc.string =         "blood_HD_m_",
+  data = 				blood_HD_m_for_NMF)
+###
+
+#Revise clusters
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/Blood/")
+load("bloodsHD_mf.RData")
+nmf_diver_cluster_m <- read.delim("~/Thesis/Avances/Blood/blood_HD_m_membership.gct")
+all(nmf_diver_cluster_m$Name == colnames(blood_m))
+a <- nmf_diver_cluster_m[grep('Control', nmf_diver_cluster_m$Name),]
+b <- nmf_diver_cluster_m[grep('CO_', nmf_diver_cluster_m$Name),]
+length(which(a$membership == 1))
+length(which(b$membership == 1))
+length(which(a$membership == 2))
+length(which(b$membership == 2))
+a <- nmf_diver_cluster_m[grep('Carrier', nmf_diver_cluster_m$Name),]
+b <- nmf_diver_cluster_m[grep('HD', nmf_diver_cluster_m$Name),]
+length(which(a$membership == 1))
+length(which(b$membership == 1))
+length(which(a$membership == 2))
+length(which(b$membership == 2))
+# 1 hay 11 ctl, 33 HD ---- 2 hay 6 ctl, 16 HD, Then 1=HD, 2=CTL
+
+blood_m_mad <- apply(blood_m, 1, mad)
+blood_m_pca <- prcomp(blood_m[order(blood_m_mad, decreasing=T)[1:2000],])
+blood_clinical_m$member_class <- ifelse(blood_clinical_m$disease == 1 & nmf_diver_cluster_m$membership == 2, 1, ifelse(blood_clinical_m$disease == 2 & nmf_diver_cluster_m$membership == 1, 2, 3))
+plot(x=blood_m_pca$rotation[,2], y=blood_m_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=blood_clinical_m$disease)
+plot(x=blood_m_pca$rotation[,2], y=blood_m_pca$rotation[,1], xlab= paste("PC 2 ", summary(blood_m_pca)$importance[2,2] * 100, "%", sep = " "), ylab= paste("PC 1 ", summary(blood_m_pca)$importance[2,1] * 100, "%", sep = " "), pch=19, col=blood_clinical_m$member_class,
+     main = "Blood-HD-m")
