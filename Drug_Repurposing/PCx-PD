@@ -1,0 +1,34 @@
+# ------- Drug repurposing -------
+library(PharmacoGx)
+library(biomaRt)
+setwd("~/Thesis/Avances/PCx-PD/")
+load("topTable_PD-PCx.RData")
+
+mart = useMart('ensembl')
+ensembl = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+gene <- getBM(attributes = c("ensembl_gene_id", "external_gene_name"), mart = ensembl)
+id <- match(rownames(limma_wo_de), gene$external_gene_name)
+limma_wo_de$Ensembl <- gene$ensembl_gene_id[id]
+limma_wo_de$Ensembl <- paste(limma_wo_de$Ensembl, "_at", sep="")
+Dsig <- data.frame(Features=limma_wo_de$Ensembl, Direction=limma_wo_de$logFC)
+rownames(Dsig) <- Dsig$Features
+D1<- Dsig$Direction
+names(D1) <- rownames(Dsig)
+
+availablePSets()
+drug.perturbation <- downloadPertSig("CMAP")
+
+res <-apply(drug.perturbation[,,c("tstat", "fdr")],
+            2,function(x, D1){
+              return(connectivityScore(x=x,
+                                       y=D1,
+                                       method="fgsea", nperm=100))
+            }, D1=D1)
+rownames(res) <-c("Connectivity", "P Value")
+res <-t(res)
+res.c <- res[order(res[,1], decreasing=TRUE),]
+res.p <- as.data.frame(res.c[order(res.c[,2], decreasing=FALSE),])
+
+res.p.sign <- res.p[res.p$`P Value` <= 0.05,]
+
+save(res.p.sign, file="drugPharmaGx_PD-PCx.RData")
