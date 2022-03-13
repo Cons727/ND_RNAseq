@@ -1,0 +1,31 @@
+#Limma all
+limma_blood <- limma4DS_fdr(blood_dataset_qn_combat, blood_clinical$disease - 1, classes_names=c("HD","Control"))
+limma_blood_up <- rownames(limma_blood)[which(limma_blood$FC > 0 & limma_blood$q.value <= 0.05)]
+limma_blood_dw <- rownames(limma_blood)[which(limma_blood$FC < 0 & limma_blood$q.value <= 0.05)]
+length(limma_blood_up) # 0 DE genes
+length(limma_blood_dw) # 0 DE genes
+
+#Limma for coefficients: Sex important
+design2 <- model.matrix(~ 0 + disease + Age + Sex, data=blood_clinical)
+vfit2 <- lmFit(blood_dataset_qn_combat, design2)
+efit2 <- eBayes(vfit2)
+summary(decideTests(efit2))
+
+# ------- Divide by sex -------
+# Female
+blood_f <- blood_dataset_qn_combat[,which(blood_clinical$Sex == 'F')]
+blood_clinical_f <- blood_clinical[which(blood_clinical$Sex == 'F'),]
+blood_f_mad <- apply(blood_f, 1, mad)
+blood_f_pca <- prcomp(blood_f[order(blood_f_mad, decreasing=T)[1:2000],])
+plot(x=blood_f_pca$rotation[,1], y=blood_f_pca$rotation[,2], xlab="PC 1", ylab="PC 2", pch=19, col=blood_clinical_f$disease)
+
+# Male
+all(colnames(blood_dataset_qn_combat) == rownames(blood_clinical))
+blood_m <- blood_dataset_qn_combat[,which(blood_clinical$Sex == 'M')]
+blood_clinical_m <- blood_clinical[which(blood_clinical$Sex == 'M'),]
+blood_m_mad <- apply(blood_m, 1, mad)
+blood_m_pca <- prcomp(blood_m[order(blood_m_mad, decreasing=T)[1:2000],])
+plot(x=blood_m_pca$rotation[,1], y=blood_m_pca$rotation[,2], xlab="PC 1", ylab="PC 2", pch=19, col=blood_clinical_m$disease)
+
+#Save bloodinson compound dataset
+save(blood_m, blood_f, blood_clinical_m, blood_clinical_f, file="bloodsHD_mf.RData")
