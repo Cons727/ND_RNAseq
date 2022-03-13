@@ -1,0 +1,71 @@
+options(stringsAsFactors=F)
+library(limma)
+library(sva)
+library(preprocessCore)
+library(GEOquery)
+library(RColorBrewer)
+
+# ------ Integrate datasets -------
+load("../GSE68719/GSE68719_data.RData")
+clinical_data_GSE68719 <- clinical_data
+clinical_data_GSE68719$sex <- as.character(clinical_data_GSE68719$sex)
+data_GSE68719 <- count_mat_qn
+
+load("../GSE135036/GSE135036_data.RData")
+clinical_data_GSE135036 <- clinical_data
+x_GSE135036 <- count_mat_pc_qn
+
+load("../BMC-PD/BMC-PD_data.RData")
+clinical_data_BMC <- clinical_data
+clinical_data_BMC$Sex <- as.character(clinical_data_BMC$Sex)
+data_BMC <- combat_data
+
+#Common genes
+common_genes <- sort(intersect(rownames(x_GSE135036), rownames(data_GSE68719)))
+common_genes <- sort(intersect(common_genes, rownames(data_BMC)))
+PD_PCx_dataset <- cbind(x_GSE135036[common_genes,], data_GSE68719[common_genes,], data_BMC[common_genes,])
+
+#Pre-processing
+png(filename = "PD-densities_before.png", width = 800, height = 800)
+plotDensities(PD_PCx_dataset, legend=F)
+dev.off()
+PD_PCx_dataset_qn <- normalize.quantiles(PD_PCx_dataset)
+colnames(PD_PCx_dataset_qn) <- colnames(PD_PCx_dataset)
+rownames(PD_PCx_dataset_qn) <- rownames(PD_PCx_dataset)
+png(filename = "PD-densities_after.png", width = 800, height = 800)
+plotDensities(PD_PCx_dataset_qn, legend=F)
+dev.off()
+
+PD_PCx_clinical <- data.frame(batch=c(rep(1, ncol(x_GSE135036)), rep(2, ncol(data_GSE68719)), rep(3, ncol(data_BMC))), disease=c(ifelse(clinical_data_GSE135036$Diagnosis == "Control", 1, 2), ifelse(clinical_data_GSE68719$condition == "Control", 1, 2), ifelse(clinical_data_BMC$Diagnosis == "Control", 1, 2)))
+PD_PCx_clinical$disease <- as.factor(PD_PCx_clinical$disease)
+PD_PCx_clinical$batch <- as.factor(PD_PCx_clinical$batch)
+PD_PCx_clinical$Sex <- as.factor(c(clinical_data_GSE135036$Sex, clinical_data_GSE68719$sex, clinical_data_BMC$Sex))
+PD_PCx_clinical$Age <- c(clinical_data_GSE135036$Age, clinical_data_GSE68719$age, clinical_data_BMC$Age)
+PD_PCx_clinical$PMI <- c(clinical_data_GSE135036$PMI, clinical_data_GSE68719$PMI, clinical_data_BMC$PMI)
+rownames(PD_PCx_clinical) <- c(rownames(clinical_data_GSE135036), rownames(clinical_data_GSE68719), clinical_data_BMC$Sample)
+
+#PCA
+PD_PCx_dataset_qn_mad <- apply(PD_PCx_dataset_qn, 1, mad)
+PD_PCx_dataset_qn_pca <- prcomp(PD_PCx_dataset_qn[order(PD_PCx_dataset_qn_mad, decreasing=T)[1:2000],])
+png("PCA_before_PD-PCx.png", width = 8, height = 8, units = 'in', res = 200)
+plot(x=PD_PCx_dataset_qn_pca$rotation[,2], y=PD_PCx_dataset_qn_pca$rotation[,1], ylab=paste("PC2 (", round(summary(PD_PCx_dataset_qn_pca)$importance[2,2]*100), "%)"), xlab=paste("PC1 (", round(summary(PD_PCx_dataset_qn_pca)$importance[2,1]*100), "%)"), pch=19, col=PD_PCx_clinical$batch, main="PCx-PD before ComBat")
+legend("topright", legend = c("Batch 1", "Batch 2", "Batch 3"), col = c(1, 2, 3), pch = 19, bty = "n", pt.cex = 2, cex = 1.5, inset = c(0.02, 0.02))
+dev.off()
+plot(x=PD_PCx_dataset_qn_pca$rotation[,2], y=PD_PCx_dataset_qn_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=PD_PCx_clinical$disease)
+
+#Combat
+modcombat <- model.matrix(~1, data=data.frame(cmb=PD_PCx_clinical$batch))
+PD_PCx_dataset_qn_combat <- ComBat(dat=PD_PCx_dataset_qn, batch=PD_PCx_clinical$batch, mod=modcombat, par.prior=TRUE, prior.plots=FALSE)
+PD_PCx_dataset_qn_combat_mad <- apply(PD_PCx_dataset_qn_combat, 1, mad)
+PD_PCx_dataset_qn_combat_pca <- prcomp(PD_PCx_dataset_qn_combat[order(PD_PCx_dataset_qn_combat_mad, decreasing=T)[1:2000],])
+png("PCA_after_PD-PCx.png", width = 8, height = 8, units = 'in', res = 200)
+plot(x=PD_PCx_dataset_qn_combat_pca$rotation[,2], y=PD_PCx_dataset_qn_combat_pca$rotation[,1], ylab=paste("PC2 (", round(summary(PD_PCx_dataset_qn_combat_pca)$importance[2,2]*100), "%)"), xlab=paste("PC1 (", round(summary(PD_PCx_dataset_qn_combat_pca)$importance[2,1]*100), "%)"), pch=19, col=PD_PCx_clinical$batch, main="PCx-PD after ComBat")
+legend("topright", legend = c("Batch 1", "Batch 2", "Batch 3"), col = c(1, 2, 3), pch = 19, bty = "n", pt.cex = 2, cex = 1.5, inset = c(0.02, 0.02))
+dev.off()
+plot(x=PD_PCx_dataset_qn_combat_pca$rotation[,2], y=PD_PCx_dataset_qn_combat_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=PD_PCx_clinical$disease)
+plot(x=PD_PCx_dataset_qn_combat_pca$rotation[,2], y=PD_PCx_dataset_qn_combat_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=ifelse(PD_PCx_clinical$Sex == 'F', 1, 2))
+plot(x=PD_PCx_dataset_qn_combat_pca$rotation[,2], y=PD_PCx_dataset_qn_combat_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=PD_PCx_clinical$Age)
+plotDensities(PD_PCx_dataset_qn_combat, legend=F)
+
+#Save PD_PCx compound dataset
+save(PD_PCx_dataset_qn_combat, PD_PCx_clinical, file="PD_PCx_data.RData")
