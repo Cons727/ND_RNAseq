@@ -1,0 +1,200 @@
+# ------- DE analysis for subtypes by NMF -------
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/PCx-PD/")
+nmf_diver_cluster <- read.delim("PD_PCx_subtype_membership.gct", sep="\t", as.is=T, row.names=1)
+load("PD_PCx_NoOutliers.RData")
+x <- log2(PD_data + 1)
+clinical <- PD[PD$disease == 2,]
+x <- x[,which(PD$disease == 2)]
+
+x_mad <- apply(x, 1, mad)
+x_pca <- prcomp(x[order(x_mad, decreasing=T)[1:2000],])
+clinical$sub_class <- as.factor(nmf_diver_cluster$membership.1) #3 subtypes
+#clinical$sub_class <- as.factor(nmf_diver_cluster$membership) # 2 subtypes
+png("PCA_Subtype_PD-PCx.png", width = 8, height = 8, units = 'in', res = 200)
+plot(x=x_pca$rotation[,2], y=x_pca$rotation[,1], ylab=paste("PC2 (", round(summary(x_pca)$importance[2,2]*100), "%)"), xlab=paste("PC1 (", round(summary(x_pca)$importance[2,1]*100), "%)"), pch=19, col=clinical$sub_class, main = "PCx-PD Subtype Clustering")
+dev.off()
+
+#Limma 
+design <- model.matrix(~ 0 + sub_class, data=clinical)
+
+contr.matrix <- makeContrasts(
+  vs1.2 = sub_class1 - sub_class2,
+  vs2.3 = sub_class2 - sub_class3,
+  vs1.3 = sub_class1 - sub_class3,
+  levels = colnames(design))
+
+#contr.matrix <- makeContrasts(
+  #vs1.2 = sub_class1 - sub_class2,
+  #levels = colnames(design))
+
+fit <- lmFit(x, design)
+fit <- contrasts.fit(fit, contrasts=contr.matrix)
+eBfit <- eBayes(fit)
+summary(decideTests(eBfit))
+
+tfit <- treat(fit, lfc=log2(1.5))
+dt <- decideTests(tfit)
+summary(dt)
+
+vs.1.2 <- topTreat(tfit, coef=1, n=Inf, lfc=log2(1.5), p.value=0.05)
+vs.2.3 <- topTreat(tfit, coef=2, n=Inf, lfc=log2(1.5), p.value=0.05)
+vs.1.3 <- topTreat(tfit, coef=3, n=Inf, lfc=log2(1.5), p.value=0.05)
+
+# ------- DE analysis for subtypes vs controls by NMF -------
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/PCx-PD/")
+nmf_diver_cluster <- read.delim("PD_PCx_subtype_membership.gct", sep="\t", as.is=T, row.names=1)
+load("PD_PCx_NoOutliers.RData")
+x <- log2(PD_data + 1)
+clinical_case <- PD[PD$disease == 2,]
+clinical_ctl <- PD[PD$disease == 1,]
+
+x_mad <- apply(x, 1, mad)
+x_pca <- prcomp(x[order(x_mad, decreasing=T)[1:2000],])
+clinical_case$sub_class <- nmf_diver_cluster$membership.1
+#clinical_case$sub_class <- nmf_diver_cluster$membership
+clinical_ctl$sub_class <- rep(5, dim(clinical_ctl)[1])
+clinical <- rbind(clinical_case, clinical_ctl)
+clinical <- clinical[match(colnames(x), rownames(clinical)),]
+clinical$sub_class <- as.factor(clinical$sub_class)
+plot(x=x_pca$rotation[,2], y=x_pca$rotation[,1], ylab=paste("PC2 (", round(summary(x_pca)$importance[2,2]*100), "%)"), xlab=paste("PC1 (", round(summary(x_pca)$importance[2,1]*100), "%)"), pch=19, col=clinical$sub_class, main = "PCx-PD Subtype Clustering")
+
+save(clinical, x, file = "clinical-exp-data_subtypes_PD-PCx.RData")
+
+#Limma 
+design <- model.matrix(~ 0 + sub_class, data=clinical)
+
+contr.matrix <- makeContrasts(
+  CTLvs1 = sub_class1 - sub_class5,
+  CTLvs2 = sub_class2 - sub_class5,
+  CTLvs3 = sub_class3 - sub_class5,
+  levels = colnames(design))
+
+fit <- lmFit(x, design)
+fit <- contrasts.fit(fit, contrasts=contr.matrix)
+eBfit <- eBayes(fit)
+edt <- decideTests(eBfit)
+summary(edt)
+
+tfit <- treat(fit, lfc=log2(1.65))
+dt <- decideTests(tfit)
+summary(dt)
+
+length(which(dt[,1]!=0 & dt[,2]!=0 & dt[,3]!=0))
+#length(which(dt[,1]!=0 & dt[,2]!=0))
+#vennDiagram(edt[,1:2], circle.col=c("turquoise", "salmon"), main='LFC>|1|')
+png("Venn_Subtype_PD-PCx.png", width = 8, height = 8, units = 'in', res = 200)
+vennDiagram(dt[,1:3], circle.col=c("turquoise", "salmon", "cornflowerblue"))
+title(main='PCx-PD Subtypes vs CTL DE genes \n logFC > |1.65|', line = -1)
+dev.off()
+
+genes1.2.3 <- rownames(dt)[which(dt[,1]!=0 & dt[,2]!=0 & dt[,3]!=0)]
+genesC.1.2 <- rownames(dt)[which(dt[,1]!=0 & dt[,2]!=0 & dt[,3]==0)]
+genesC.1.3 <- rownames(dt)[which(dt[,1]!=0 & dt[,3]!=0 & dt[,2]==0)]
+genesC.2.3 <- rownames(dt)[which(dt[,2]!=0 & dt[,3]!=0 & dt[,1]==0)]
+genesC.1 <- rownames(dt)[which(dt[,1]!=0 & dt[,2]==0 & dt[,3]==0)]
+genesC.2 <- rownames(dt)[which(dt[,2]!=0 & dt[,1]==0 & dt[,3]==0)]
+genesC.3 <- rownames(dt)[which(dt[,3]!=0 & dt[,2]==0 & dt[,1]==0)]
+common_DEgenes <- data.frame(Int.1.2.3=c(genes1.2.3, rep(NA, -length(genes1.2.3)+length(genesC.2))),
+                             Int.1.2=c(genesC.1.2, rep(NA, -length(genesC.1.2)+length(genesC.2))),
+                             Int.1.3=c(genesC.1.3, rep(NA, -length(genesC.1.3)+length(genesC.2))),
+                             Int.2.3=c(genesC.2.3, rep(NA, -length(genesC.2.3)+length(genesC.2))),
+                             Int.1=c(genesC.1, rep(NA, -length(genesC.1)+length(genesC.2))),
+                             Int.2=c(genesC.2, rep(NA, -length(genesC.2)+length(genesC.2))),
+                             Int.3=c(genesC.3, rep(NA, -length(genesC.3)+length(genesC.2))))
+
+CTL.vs.1 <- topTreat(tfit, coef=1, n=Inf, lfc=log2(1.65), p.value=0.05)
+CTL.vs.2 <- topTreat(tfit, coef=2, n=Inf, lfc=log2(1.65), p.value=0.05)
+CTL.vs.3 <- topTreat(tfit, coef=3, n=Inf, lfc=log2(1.65), p.value=0.05)
+eBgeneList.1 <- topTable(eBfit, coef=1, n=Inf, p.value = 0.05)
+eBgeneList.2 <- topTable(eBfit, coef=2, n=Inf, p.value = 0.05)
+eBgeneList.3 <- topTable(eBfit, coef=3, n=Inf, p.value = 0.05)
+
+save(common_DEgenes, CTL.vs.1, CTL.vs.2, CTL.vs.3, eBgeneList.1, eBgeneList.2, eBgeneList.3, file="DEgenes_CTLvsSubtype_PD-PCx.RData")
+
+# Heatmap
+library(gplots)
+library(pheatmap)
+load("DEgenes_CTLvsSubtype_PD-PCx.RData")
+load("clinical-exp-data_subtypes_PD-PCx.RData")
+clinical_CTLvs1 <- clinical[which(clinical$sub_class == 1 | clinical$sub_class == 5), ]
+data_CTLvs1 <- x[, which(clinical$sub_class == 1 | clinical$sub_class == 5)]
+all(colnames(data_CTLvs1) == rownames(clinical_CTLvs1))
+CTL.vs.1.topgenes <- rownames(CTL.vs.1)
+i <- which(rownames(data_CTLvs1) %in% CTL.vs.1.topgenes)
+mycol <- colorpanel(15,"blue","white","red")
+myBreaks <- seq(-2, 2, length.out=16)
+heat <- t(scale(t(data_CTLvs1))) #scaling
+png("DE analysis/CTLvs1_PD-PCx.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(heat[i,], scale="none",
+          labRow=CTL.vs.1.topgenes, labCol=colnames(data_CTLvs1),
+          col=mycol, trace="none", density.info="none",
+          ColSideColors=c("cornflowerblue","orange3")[clinical_CTLvs1$member_class],
+          Colv = NULL, dendrogram="none", keysize=0.6, reorderfun=function(d,w) reorder(d, w, agglo.FUN=mean),
+          distfun=function(x) as.dist(1-cor(t(x))),
+          hclustfun=function(x) hclust(x, method="complete"),
+          breaks = myBreaks)
+dev.off()
+
+clinical_CTLvs2 <- clinical[which(clinical$sub_class == 2 | clinical$sub_class == 5), ]
+data_CTLvs2 <- x[, which(clinical$sub_class == 2 | clinical$sub_class == 5)]
+all(colnames(data_CTLvs2) == rownames(clinical_CTLvs2))
+CTL.vs.2.topgenes <- rownames(CTL.vs.2)
+i <- which(rownames(data_CTLvs2) %in% CTL.vs.2.topgenes)
+mycol <- colorpanel(15,"blue","white","red")
+myBreaks <- seq(-2, 2, length.out=16)
+heat <- t(scale(t(data_CTLvs2))) #scaling
+png("DE analysis/CTLvs2_PD-PCx_all.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(heat[i,], scale="none", labCol=colnames(data_CTLvs2),
+          col=mycol, trace="none", density.info="none", labRow = FALSE,
+          ColSideColors=c("cornflowerblue","orange3")[clinical_CTLvs2$member_class],
+          Colv = NULL, dendrogram="none", keysize=0.6, reorderfun=function(d,w) reorder(d, w, agglo.FUN=mean),
+          distfun=function(x) as.dist(1-cor(t(x))),
+          hclustfun=function(x) hclust(x, method="complete"),
+          breaks = myBreaks)
+dev.off()
+
+CTL.vs.2.topgenes <- rownames(CTL.vs.2[1:100, ])
+i <- which(rownames(data_CTLvs2) %in% CTL.vs.2.topgenes)
+mycol <- colorpanel(15,"blue","white","red")
+png("CTLvs2_PD-PCx_100.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(data_CTLvs2[i,], scale="row",
+          labRow=CTL.vs.2.topgenes, labCol=colnames(data_CTLvs2),
+          col=mycol, trace="none", density.info="none",
+          ColSideColors=c("cornflowerblue","orange3")[clinical_CTLvs2$member_class],
+          Colv = NULL, dendrogram="none", keysize=0.6, reorderfun=function(d,w) reorder(d, w, agglo.FUN=mean),
+          distfun=function(x) as.dist(1-cor(t(x))),
+          hclustfun=function(x) hclust(x, method="complete"))
+dev.off()
+
+clinical_CTLvs3 <- clinical[which(clinical$sub_class == 3 | clinical$sub_class == 5), ]
+data_CTLvs3 <- x[, which(clinical$sub_class == 3 | clinical$sub_class == 5)]
+all(colnames(data_CTLvs3) == rownames(clinical_CTLvs3))
+CTL.vs.3.topgenes <- rownames(CTL.vs.3)
+i <- which(rownames(data_CTLvs3) %in% CTL.vs.3.topgenes)
+mycol <- colorpanel(15,"blue","white","red")
+myBreaks <- seq(-2, 2, length.out=16)
+heat <- t(scale(t(data_CTLvs3))) #scaling
+png("DE analysis/CTLvs3_PD-PCx_all.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(heat[i,], scale="none", labCol=colnames(data_CTLvs3),
+          col=mycol, trace="none", density.info="none", labRow = FALSE,
+          ColSideColors=c("cornflowerblue","orange3")[clinical_CTLvs3$member_class],
+          Colv = NULL, dendrogram="none", keysize=0.6, reorderfun=function(d,w) reorder(d, w, agglo.FUN=mean),
+          distfun=function(x) as.dist(1-cor(t(x))),
+          hclustfun=function(x) hclust(x, method="complete"),
+          breaks = myBreaks)
+dev.off()
+
+CTL.vs.3.topgenes <- rownames(CTL.vs.3[1:100, ])
+i <- which(rownames(data_CTLvs3) %in% CTL.vs.3.topgenes)
+mycol <- colorpanel(15,"blue","white","red")
+png("CTLvs3_PD-PCx_100.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(data_CTLvs3[i,], scale="row",
+          labRow=CTL.vs.3.topgenes, labCol=colnames(data_CTLvs3),
+          col=mycol, trace="none", density.info="none",
+          ColSideColors=c("cornflowerblue","orange3")[clinical_CTLvs3$member_class],
+          Colv = NULL, dendrogram="none", keysize=0.6, reorderfun=function(d,w) reorder(d, w, agglo.FUN=mean),
+          distfun=function(x) as.dist(1-cor(t(x))),
+          hclustfun=function(x) hclust(x, method="complete"))
+dev.off()
