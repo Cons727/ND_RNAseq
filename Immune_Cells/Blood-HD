@@ -1,0 +1,31 @@
+# -------- Order samples and save for CIBERSORTx -m -------
+# Male
+load("~/Thesis/Avances/Blood/bloodsHD_mf.RData")
+nmf_diver_cluster_m <- read.delim("~/Thesis/Avances/Blood/blood_HD_m_membership.gct")
+blood_clinical_m$member_class <- ifelse(blood_clinical_m$disease == 1 & nmf_diver_cluster_m$membership == 2, 1, ifelse(blood_clinical_m$disease == 2 & nmf_diver_cluster_m$membership == 1, 2, 3))
+bHD_m <- blood_clinical_m[-which(blood_clinical_m$member_class == 3),]
+bHD_m <- bHD_m[order(bHD_m$disease),]
+blood_data_m <- blood_m[,-which(blood_clinical_m$member_class == 3)]
+blood_data_m <- blood_data_m[, match(rownames(bHD_m), colnames(blood_data_m))]
+blood_data_m <- 2 ^ blood_data_m
+gene <- data.frame(gene = rownames(blood_data_m))
+blood_data_m_cibersort <- cbind(gene, blood_data_m)
+
+save(bHD_m, blood_data_m, file = "HD_blood_m_NoOutliers.RData")
+write.table(blood_data_m_cibersort, file = "blood_HD_m_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+# -------- Order samples and save for CIBERSORTx -f -------
+# Female
+load("~/Thesis/Avances/Blood/bloodsHD_mf.RData")
+nmf_diver_cluster_f <- read.delim("~/Thesis/Avances/Blood/blood_HD_f_membership.gct")
+blood_clinical_f$member_class <- ifelse(blood_clinical_f$disease == 1 & nmf_diver_cluster_f$membership == 2, 1, ifelse(blood_clinical_f$disease == 2 & nmf_diver_cluster_f$membership == 1, 2, 3))
+bHD_f <- blood_clinical_f[-which(blood_clinical_f$member_class == 3),]
+bHD_f <- bHD_f[order(bHD_f$disease),]
+blood_data_f <- blood_f[,-which(blood_clinical_f$member_class == 3)]
+blood_data_f <- blood_data_f[, match(rownames(bHD_f), colnames(blood_data_f))]
+blood_data_f <- 2 ^ blood_data_f
+gene <- data.frame(gene = rownames(blood_data_f))
+blood_data_f_cibersort <- cbind(gene, blood_data_f)
+
+save(bHD_f, blood_data_f, file = "HD_blood_f_NoOutliers.RData")
+write.table(blood_data_f_cibersort, file = "blood_HD_f_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
