@@ -13,3 +13,35 @@ PD_data_cibersort <- cbind(gene, PD_data)
 
 save(PD, PD_data, file="PD_PCx_NoOutliers.RData")
 write.table(PD_data_cibersort, file = "PD_PCx_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+load("PD_PCx_NoOutliers.RData")
+clinical_case <- PD[PD$disease == 2,]
+clinical_ctl <- PD[PD$disease == 1,]
+nmf_diver_cluster_f <- read.delim("~/Thesis/Avances/PCx-PD/PD_PCx_subtype_membership.gct")
+all(rownames(clinical_case) == nmf_diver_cluster_f$Name)
+
+clinical_case$member_class <- nmf_diver_cluster_f$membership.1
+clinical_case <- clinical_case[order(clinical_case$member_class), ]
+blood_data_one <- clinical_case[which(clinical_case$member_class == 1), ]
+blood_data_one <- PD_data[, match(rownames(blood_data_one), colnames(PD_data))]
+gene <- data.frame(gene = rownames(blood_data_one))
+blood_data_f_cibersort <- cbind(gene, blood_data_one)
+
+save(blood_data_one, file = "PD_PCx_Sub1_NoOutliers.RData")
+write.table(blood_data_f_cibersort, file = "PCx_PD_Sub1_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+blood_data_two <- clinical_case[which(clinical_case$member_class == 2), ]
+blood_data_two <- PD_data[, match(rownames(blood_data_two), colnames(PD_data))]
+gene <- data.frame(gene = rownames(blood_data_two))
+blood_data_f_cibersort <- cbind(gene, blood_data_two)
+
+save(blood_data_two, file = "PD_PCx_Sub2_NoOutliers.RData")
+write.table(blood_data_f_cibersort, file = "PCx_PD_Sub2_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+blood_data_three <- clinical_case[which(clinical_case$member_class == 3), ]
+blood_data_three <- PD_data[, match(rownames(blood_data_three), colnames(PD_data))]
+gene <- data.frame(gene = rownames(blood_data_three))
+blood_data_f_cibersort <- cbind(gene, blood_data_three)
+
+save(blood_data_three, file = "PD_PCx_Sub3_NoOutliers.RData")
+write.table(blood_data_f_cibersort, file = "PCx_PD_Sub3_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
