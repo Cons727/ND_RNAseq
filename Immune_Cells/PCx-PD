@@ -1,0 +1,15 @@
+# ------- Order samples and save for CIBERSORTx -------
+load("PD_PCx_data.RData")
+nmf_diver_cluster <- read.delim("PD_PCx_membership.gct", sep="\t", as.is=T, row.names=1)
+nmf_diver_cluster <- nmf_diver_cluster[-159,]
+PD_PCx_clinical$member_class <- ifelse(PD_PCx_clinical$disease == 1 & nmf_diver_cluster$membership == 2, 1, ifelse(PD_PCx_clinical$disease == 2 & nmf_diver_cluster$membership == 1, 2, 3))
+PD <- PD_PCx_clinical[-which(PD_PCx_clinical$member_class == 3),]
+PD <- PD[order(PD$disease),]
+PD_data <- PD_PCx_dataset_qn_combat[,-which(PD_PCx_clinical$member_class == 3)]
+PD_data <- PD_data[, match(rownames(PD), colnames(PD_data))]
+PD_data <- 2 ^ PD_data
+gene <- data.frame(gene = rownames(PD_data))
+PD_data_cibersort <- cbind(gene, PD_data)
+
+save(PD, PD_data, file="PD_PCx_NoOutliers.RData")
+write.table(PD_data_cibersort, file = "PD_PCx_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
