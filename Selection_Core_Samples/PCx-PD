@@ -1,0 +1,218 @@
+# ------- Remove outliers -f -----
+# Female
+# Use non negative matrix factorization to identify outliers
+load("PD_PCx_mf.RData")
+library(dplyr)
+source('~/Thesis/Codes/Emmanuels/fileIO.R')
+PD_PCx_mad <- apply(PD_PCx_f, 1, mad)
+PD_PCx_for_NMF_f <- t(apply(PD_PCx_f[order(PD_PCx_mad, decreasing=T)[1:2000],], 1, scale))
+colnames(PD_PCx_for_NMF_f) <- colnames(PD_PCx_f)
+write.gct(mat=as.data.frame(PD_PCx_for_NMF_f), gct.file = "PD_PCx_f_for_NMF_2000.gct")
+save(PD_PCx_for_NMF_f, file="PD_PCx_f_for_NMF_2000.RData")
+
+###
+#NMF
+options(stringsAsFactors=F)
+setwd("NMF")
+source("nmfconsensus.R")
+load("PD_PCx_f_for_NMF_2000.RData")
+
+nmfconsensus(
+  input.ds =           "PD_PCx_f_for_NMF_2000.gct",
+  k.init =             2,
+  k.final =            4,
+  num.clusterings =    100,
+  maxniter =           1000,
+  error.function =     "euclidean",
+  rseed =              1234,
+  stopconv =           40,
+  stopfreq =           10,
+  non.interactive.run = F,
+  doc.string =         "PD_PCx_f_",
+  data = 				PD_PCx_for_NMF_f)
+###
+#Revise clusters
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/PCx-PD/")
+nmf_diver_cluster <- read.delim("PD_PCx_f_membership.gct", sep="\t", as.is=T, row.names=1)
+load("PD_PCx_mf.RData")
+length(which(PD_PCx_clinical_f$disease == 1 & nmf_diver_cluster$membership == 1)) # 6 CTL in 1
+length(which(PD_PCx_clinical_f$disease == 2 & nmf_diver_cluster$membership == 1)) # 10 PD in 1
+length(which(PD_PCx_clinical_f$disease == 1 & nmf_diver_cluster$membership == 2)) # 6 CTL in 2
+length(which(PD_PCx_clinical_f$disease == 2 & nmf_diver_cluster$membership == 2)) # 5 PD in 2
+# PD=1, CTL=2
+
+PD_PCx_f_mad <- apply(PD_PCx_f, 1, mad)
+PD_PCx_f_mad_pca <- prcomp(PD_PCx_f[order(PD_PCx_f_mad, decreasing=T)[1:2000],])
+PD_PCx_clinical_f$member_class <- ifelse(PD_PCx_clinical_f$disease == 1 & nmf_diver_cluster$membership == 2, 1, ifelse(PD_PCx_clinical_f$disease == 2 & nmf_diver_cluster$membership == 1, 2, 3))
+plot(x=PD_PCx_f_mad_pca$rotation[,2], y=PD_PCx_f_mad_pca$rotation[,1], xlab= paste("PC 2 ", summary(PD_PCx_f_mad_pca)$importance[2,2] * 100, "%", sep = " "), ylab= paste("PC 1 ", summary(PD_PCx_f_mad_pca)$importance[2,1] * 100, "%", sep = " "), pch=19, col=PD_PCx_clinical_f$member_class,
+     main = "PCx-PD")
+
+#Limma
+limma_wo <- limma4DS_fdr(PD_PCx_f[,-which(PD_PCx_clinical_f$member_class == 3)], ifelse(PD_PCx_clinical_f$disease[-which(PD_PCx_clinical_f$member_class == 3)] == 1, 1, 0), classes_names=c("PD","Control"))
+limma_wo_up <- rownames(limma_wo)[which(limma_wo$logFC > 1 & limma_wo$q.value <= 0.05)]
+limma_wo_dw <- rownames(limma_wo)[which(limma_wo$logFC < -1 & limma_wo$q.value <= 0.05)]
+length(limma_wo_up) # 330 DE genes
+length(limma_wo_dw) # 411 DE genes
+
+limma_wo_de <- limma_wo[which((limma_wo$logFC > 1 | limma_wo$logFC < -1) & limma_wo$q.value <= 0.05),]
+save(limma_wo_de, limma_wo, file="topTable_f_PD-PCx.RData")
+
+# ------- Remove outliers -m -----
+# Male
+# Use non negative matrix factorization to identify outliers
+load("PD_PCx_mf.RData")
+library(dplyr)
+source('~/Thesis/Codes/Emmanuels/fileIO.R')
+PD_PCx_mad <- apply(PD_PCx_m, 1, mad)
+PD_PCx_for_NMF_m <- t(apply(PD_PCx_m[order(PD_PCx_mad, decreasing=T)[1:2000],], 1, scale))
+colnames(PD_PCx_for_NMF_m) <- colnames(PD_PCx_m)
+write.gct(mat=as.data.frame(PD_PCx_for_NMF_m), gct.file = "PD_PCx_m_for_NMF_2000.gct")
+save(PD_PCx_for_NMF_m, file="PD_PCx_m_for_NMF_2000.RData")
+
+###
+#NMF
+options(stringsAsFactors=F)
+setwd("NMF")
+source("nmfconsensus.R")
+load("PD_PCx_m_for_NMF_2000.RData")
+
+nmfconsensus(
+  input.ds =           "PD_PCx_m_for_NMF_2000.gct",
+  k.init =             2,
+  k.final =            4,
+  num.clusterings =    100,
+  maxniter =           1000,
+  error.function =     "euclidean",
+  rseed =              1234,
+  stopconv =           40,
+  stopfreq =           10,
+  non.interactive.run = F,
+  doc.string =         "PD_PCx_m_",
+  data = 				PD_PCx_for_NMF_m)
+###
+#Revise clusters
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/PCx-PD/")
+nmf_diver_cluster <- read.delim("PD_PCx_m_membership.gct", sep="\t", as.is=T, row.names=1)
+load("PD_PCx_mf.RData")
+length(which(PD_PCx_clinical_m$disease == 1 & nmf_diver_cluster$membership == 1)) # 23 CTL in 1
+length(which(PD_PCx_clinical_m$disease == 2 & nmf_diver_cluster$membership == 1)) # 44 PD in 1
+length(which(PD_PCx_clinical_m$disease == 1 & nmf_diver_cluster$membership == 2)) # 43 CTL in 2
+length(which(PD_PCx_clinical_m$disease == 2 & nmf_diver_cluster$membership == 2)) # 21 PD in 2
+# PD=1, CTL=2
+
+PD_PCx_m_mad <- apply(PD_PCx_m, 1, mad)
+PD_PCx_m_mad_pca <- prcomp(PD_PCx_m[order(PD_PCx_m_mad, decreasing=T)[1:2000],])
+PD_PCx_clinical_m$member_class <- ifelse(PD_PCx_clinical_m$disease == 1 & nmf_diver_cluster$membership == 2, 1, ifelse(PD_PCx_clinical_m$disease == 2 & nmf_diver_cluster$membership == 1, 2, 3))
+plot(x=PD_PCx_m_mad_pca$rotation[,2], y=PD_PCx_m_mad_pca$rotation[,1], xlab= paste("PC 2 ", summary(PD_PCx_m_mad_pca)$importance[2,2] * 100, "%", sep = " "), ylab= paste("PC 1 ", summary(PD_PCx_m_mad_pca)$importance[2,1] * 100, "%", sep = " "), pch=19, col=PD_PCx_clinical_m$member_class)
+
+#Limma
+limma_wo <- limma4DS_fdr(PD_PCx_m[,-which(PD_PCx_clinical_m$member_class == 3)], ifelse(PD_PCx_clinical_m$disease[-which(PD_PCx_clinical_m$member_class == 3)] == 1, 1, 0), classes_names=c("PD","Control"))
+limma_wo_up <- rownames(limma_wo)[which(limma_wo$logFC > 1 & limma_wo$q.value <= 0.05)]
+limma_wo_dw <- rownames(limma_wo)[which(limma_wo$logFC < -1 & limma_wo$q.value <= 0.05)]
+length(limma_wo_up) # 326 DE genes
+length(limma_wo_dw) # 423 DE genes
+
+limma_wo_de <- limma_wo[which((limma_wo$logFC > 1 | limma_wo$logFC < -1) & limma_wo$q.value <= 0.05),]
+save(limma_wo_de, limma_wo, file="topTable_m_PD-PCx.RData")
+
+# ------- Limma all DE and remove outliers -------
+PD_PCx_clinical$disease <- as.numeric(PD_PCx_clinical$disease)
+limma_PD_PCx <- limma4DS_fdr(PD_PCx_dataset_qn_combat, PD_PCx_clinical$disease - 1, classes_names=c("PD","Control"))
+limma_PD_PCx_up <- rownames(limma_PD_PCx)[which(limma_PD_PCx$FC > 0 & limma_PD_PCx$q.value <= 0.05)]
+limma_PD_PCx_dw <- rownames(limma_PD_PCx)[which(limma_PD_PCx$FC < 0 & limma_PD_PCx$q.value <= 0.05)]
+length(limma_PD_PCx_up) # 0 DE genes
+length(limma_PD_PCx_dw) # 0 DE genes
+
+# Use non negative matrix factorization to identify outliers
+load("PD_PCx_data.RData")
+#load("PD_PCx_dataset_data.RData")
+library(dplyr)
+source('~/Thesis/Codes/Emmanuels/fileIO.R')
+PD_PCx_dataset_qn_combat_mad <- apply(PD_PCx_dataset_qn_combat, 1, mad)
+PD_PCx_for_NMF <- t(apply(PD_PCx_dataset_qn_combat[order(PD_PCx_dataset_qn_combat_mad, decreasing=T)[1:2000],], 1, scale))
+colnames(PD_PCx_for_NMF) <- colnames(PD_PCx_dataset_qn_combat)
+write.gct(mat=as.data.frame(PD_PCx_for_NMF), gct.file = "PD_PCx_dataset_for_NMF_2000.gct")
+save(PD_PCx_for_NMF, file="PD_PCx_dataset_for_NMF_2000.RData")
+
+###
+#NMF
+options(stringsAsFactors=F)
+setwd("NMF")
+source("nmfconsensus.R")
+load("PD_PCx_dataset_for_NMF_2000.RData")
+
+nmfconsensus(
+  input.ds =           "PD_PCx_datset_for_NMF_2000.gct",
+  k.init =             2,
+  k.final =            4,
+  num.clusterings =    100,
+  maxniter =           1000,
+  error.function =     "euclidean",
+  rseed =              1234,
+  stopconv =           40,
+  stopfreq =           10,
+  non.interactive.run = F,
+  doc.string =         "PD_PCx_",
+  data = 				PD_PCx_for_NMF)
+###
+
+#Revise clusters
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/PCx-PD/")
+nmf_diver_cluster <- read.delim("PD_PCx_membership.gct", sep="\t", as.is=T, row.names=1)
+nmf_diver_cluster <- nmf_diver_cluster[-159,]
+load("PD_PCx_data.RData") # 1 hay 28 ctl, 55 PD ---- 2 hay 50 ctl, 24 PD. Then, 1=PD, 2=CTL
+
+PD_PCx_dataset_qn_combat_mad <- apply(PD_PCx_dataset_qn_combat, 1, mad)
+PD_PCx_dataset_qn_combat_mad_pca <- prcomp(PD_PCx_dataset_qn_combat[order(PD_PCx_dataset_qn_combat_mad, decreasing=T)[1:2000],])
+PD_PCx_clinical$member_class <- ifelse(PD_PCx_clinical$disease == 1 & nmf_diver_cluster$membership == 2, 1, ifelse(PD_PCx_clinical$disease == 2 & nmf_diver_cluster$membership == 1, 2, 3))
+plot(x=PD_PCx_dataset_qn_combat_mad_pca$rotation[,2], y=PD_PCx_dataset_qn_combat_mad_pca$rotation[,1], xlab= paste("PC 2 ", summary(PD_PCx_dataset_qn_combat_mad_pca)$importance[2,2] * 100, "%", sep = " "), ylab= paste("PC 1 ", summary(PD_PCx_dataset_qn_combat_mad_pca)$importance[2,1] * 100, "%", sep = " "), pch=19, col=PD_PCx_clinical$disease)
+plot(x=PD_PCx_dataset_qn_combat_mad_pca$rotation[,2], y=PD_PCx_dataset_qn_combat_mad_pca$rotation[,1], xlab= paste("PC 2 ", summary(PD_PCx_dataset_qn_combat_mad_pca)$importance[2,2] * 100, "%", sep = " "), ylab= paste("PC 1 ", summary(PD_PCx_dataset_qn_combat_mad_pca)$importance[2,1] * 100, "%", sep = " "), pch=19, col=PD_PCx_clinical$member_class,
+     main = "PCx-PD")
+
+#Limma
+limma_wo <- limma4DS_fdr(PD_PCx_dataset_qn_combat[,-which(PD_PCx_clinical$member_class == 3)], ifelse(PD_PCx_clinical$disease[-which(PD_PCx_clinical$member_class == 3)] == 1, 1, 0), classes_names=c("Control","PD"))
+limma_wo_up <- rownames(limma_wo)[which(limma_wo$logFC > 1 & limma_wo$q.value <= 0.05)]
+limma_wo_dw <- rownames(limma_wo)[which(limma_wo$logFC < -1 & limma_wo$q.value <= 0.05)]
+length(limma_wo_up) # 144 DE genes
+length(limma_wo_dw) # 239 DE genes
+
+limma_wo_de <- limma_wo[which((limma_wo$logFC > 1 | limma_wo$logFC < -1) & limma_wo$q.value <= 0.05),]
+save(limma_wo_de, limma_wo, file="topTable_PD-PCx.RData")
+
+# Heatmap
+library(gplots)
+library(pheatmap)
+load("topTable_PD-PCx.RData")
+load("PD_PCx_NoOutliers.RData")
+all(colnames(PD_data) == rownames(PD))
+CTL.vs.PD.topgenes <- rownames(limma_wo_de)
+i <- which(rownames(PD_data) %in% CTL.vs.PD.topgenes)
+mycol <- colorpanel(15,"blue","white","red")
+myBreaks <- seq(-2, 2, length.out=16)
+heat <- t(scale(t(PD_data))) #scaling
+png("DE analysis/CTLvsPD-PCX_all.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(heat[i,], scale="none",
+          labRow=FALSE, labCol=colnames(PD_data),
+          col=mycol, trace="none", density.info="none",
+          ColSideColors=c("cornflowerblue","orange3")[PD$disease],
+          Colv = NULL, dendrogram="none", keysize=0.6, reorderfun=function(d,w) reorder(d, w, agglo.FUN=mean),
+          distfun=function(x) as.dist(1-cor(t(x))),
+          hclustfun=function(x) hclust(x, method="complete"),
+          breaks = myBreaks)
+dev.off()
+
+CTL.vs.PD.topgenes <- rownames(limma_wo_de[1:100,])
+i <- which(rownames(PD_data) %in% CTL.vs.PD.topgenes)
+mycol <- colorpanel(15,"blue","white","red")
+png("DE analysis/CTLvsPD-PCX_100.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(PD_data[i,], scale="row",
+          labRow=CTL.vs.PD.topgenes, labCol=colnames(PD_data),
+          col=mycol, trace="none", density.info="none",
+          ColSideColors=c("cornflowerblue","orange3")[PD$disease],
+          Colv = NULL, dendrogram="none", keysize=0.6, reorderfun=function(d,w) reorder(d, w, agglo.FUN=mean),
+          distfun=function(x) as.dist(1-cor(t(x))),
+          hclustfun=function(x) hclust(x, method="complete"))
+dev.off()
