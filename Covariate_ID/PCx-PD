@@ -1,0 +1,40 @@
+library(limma)
+
+#Limma for coefficients: Sex, age and disease important
+design2 <- model.matrix(~ 0 + disease + Age + Sex + PMI, data=PD_PCx_clinical)
+vfit2 <- lmFit(PD_PCx_dataset_qn_combat, design2)
+efit2 <- eBayes(vfit2)
+summary(decideTests(efit2))
+
+# ------- Divide by sex -------
+# Female
+PD_PCx_f <- PD_PCx_dataset_qn_combat[,which(PD_PCx_clinical$Sex == 'F')]
+PD_PCx_clinical_f <- PD_PCx_clinical[which(PD_PCx_clinical$Sex == 'F'),]
+PD_PCx_f_mad <- apply(PD_PCx_f, 1, mad)
+PD_PCx_f_pca <- prcomp(PD_PCx_f[order(PD_PCx_f_mad, decreasing=T)[1:2000],])
+plot(x=PD_PCx_f_pca$rotation[,1], y=PD_PCx_f_pca$rotation[,2], xlab="PC 1", ylab="PC 2", pch=19, col=PD_PCx_clinical_f$disease)
+
+PD_PCx_clinical_f$disease <- as.numeric(PD_PCx_clinical_f$disease)
+limma_PD_PCx <- limma4DS_fdr(PD_PCx_f, PD_PCx_clinical_f$disease - 1, classes_names=c("PD","Control"))
+limma_PD_PCx_up <- rownames(limma_PD_PCx)[which(limma_PD_PCx$FC > 0 & limma_PD_PCx$q.value <= 0.05)]
+limma_PD_PCx_dw <- rownames(limma_PD_PCx)[which(limma_PD_PCx$FC < 0 & limma_PD_PCx$q.value <= 0.05)]
+length(limma_PD_PCx_up)
+length(limma_PD_PCx_dw)
+
+# Male
+all(colnames(PD_PCx_dataset_qn_combat) == rownames(PD_PCx_clinical))
+PD_PCx_m <- PD_PCx_dataset_qn_combat[,which(PD_PCx_clinical$Sex == 'M')]
+PD_PCx_clinical_m <- PD_PCx_clinical[which(PD_PCx_clinical$Sex == 'M'),]
+PD_PCx_m_mad <- apply(PD_PCx_m, 1, mad)
+PD_PCx_m_pca <- prcomp(PD_PCx_m[order(PD_PCx_m_mad, decreasing=T)[1:2000],])
+plot(x=PD_PCx_m_pca$rotation[,1], y=PD_PCx_m_pca$rotation[,2], xlab="PC 1", ylab="PC 2", pch=19, col=PD_PCx_clinical_m$disease)
+
+PD_PCx_clinical_m$disease <- as.numeric(PD_PCx_clinical_m$disease)
+limma_PD_PCx <- limma4DS_fdr(PD_PCx_m, PD_PCx_clinical_m$disease - 1, classes_names=c("PD","Control"))
+limma_PD_PCx_up <- rownames(limma_PD_PCx)[which(limma_PD_PCx$FC > 0 & limma_PD_PCx$q.value <= 0.05)]
+limma_PD_PCx_dw <- rownames(limma_PD_PCx)[which(limma_PD_PCx$FC < 0 & limma_PD_PCx$q.value <= 0.05)]
+length(limma_PD_PCx_up)
+length(limma_PD_PCx_dw)
+
+#Save PD_PCx compound dataset
+save(PD_PCx_m, PD_PCx_f, PD_PCx_clinical_m, PD_PCx_clinical_f, file="PD_PCx_mf.RData")
