@@ -1,0 +1,158 @@
+# ------ BRETIGEA Analysis for PD-PCx -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/PCx-PD")
+load("~/Thesis/Avances/PCx-PD/PD_PCx_NoOutliers.RData")
+
+x <- as.data.frame(PD_data)
+x <- log2(x + 1)
+#str(x, list.len = 5)
+#str(PD, list.len = 5)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+# ------ Evaluate the effect of cell deconvolution ------
+library(limma)
+all(rownames(PD) == rownames(ct_res)) # [1] TRUE
+md <- cbind(PD, ct_res)
+
+#Limma for coefficients: All very important, except for age
+design2 <- model.matrix(~ 0 + ast + end + mic + neu + oli + opc + Age + Sex + disease, data=md)
+vfit2 <- lmFit(x, design2)
+efit2 <- eBayes(vfit2)
+summary(decideTests(efit2))
+
+# t-test between Control and AD
+res <- data.frame(PD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(md$disease == 2)]
+  ctl <- ct_res[, i][which(md$disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/PCx-PD/brainCells_PD-PCx.RData")
+save(res, ct_res, file = "brainCells_PD-PCx.RData")
+
+# ------ BRETIGEA Analysis for PD-PCx Sub1 -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/PCx-PD")
+load("~/Thesis/Avances/PCx-PD/PD_PCx_Sub1_NoOutliers.RData")
+load("~/Thesis/Avances/PCx-PD/PD_PCx_NoOutliers.RData")
+
+case <- data.frame(Disease = rep(2, ncol(blood_data_one)), row.names = colnames(blood_data_one))
+ctrl <- data.frame(Disease = rep(1, nrow(PD[PD$disease == 1, ])), row.names = rownames(PD[PD$disease == 1, ]))
+samples <- rbind(ctrl, case)
+mdata <- PD_data[, match(rownames(samples), colnames(PD_data))]
+
+x <- as.data.frame(mdata)
+x <- log2(x + 1)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+all(colnames(mdata) == rownames(ct_res))
+mdata <- cbind(samples, ct_res)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(mdata$Disease == 2)]
+  ctl <- ct_res[, i][which(mdata$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/PCx-PD/brainCells_PD_PCx_Sub1.RData")
+save(res, ct_res, file = "brainCells_PD_PCx_Sub1.RData")
+
+# ------ BRETIGEA Analysis for PD-PCx Sub2 -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/PCx-PD")
+load("~/Thesis/Avances/PCx-PD/PD_PCx_Sub2_NoOutliers.RData")
+load("~/Thesis/Avances/PCx-PD/PD_PCx_NoOutliers.RData")
+
+case <- data.frame(Disease = rep(2, ncol(blood_data_two)), row.names = colnames(blood_data_two))
+ctrl <- data.frame(Disease = rep(1, nrow(PD[PD$disease == 1, ])), row.names = rownames(PD[PD$disease == 1, ]))
+samples <- rbind(ctrl, case)
+mdata <- PD_data[, match(rownames(samples), colnames(PD_data))]
+
+x <- as.data.frame(mdata)
+x <- log2(x + 1)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+all(colnames(mdata) == rownames(ct_res))
+mdata <- cbind(samples, ct_res)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(mdata$Disease == 2)]
+  ctl <- ct_res[, i][which(mdata$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/PCx-PD/brainCells_PD_PCx_Sub2.RData")
+save(res, ct_res, file = "brainCells_PD_PCx_Sub2.RData")
+
+# ------ BRETIGEA Analysis for PD-PCx Sub3 -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/PCx-PD")
+load("~/Thesis/Avances/PCx-PD/PD_PCx_Sub3_NoOutliers.RData")
+load("~/Thesis/Avances/PCx-PD/PD_PCx_NoOutliers.RData")
+
+case <- data.frame(Disease = rep(2, ncol(blood_data_three)), row.names = colnames(blood_data_three))
+ctrl <- data.frame(Disease = rep(1, nrow(PD[PD$disease == 1, ])), row.names = rownames(PD[PD$disease == 1, ]))
+samples <- rbind(ctrl, case)
+mdata <- PD_data[, match(rownames(samples), colnames(PD_data))]
+
+x <- as.data.frame(mdata)
+x <- log2(x + 1)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+all(colnames(mdata) == rownames(ct_res))
+mdata <- cbind(samples, ct_res)
+
+# t-test between Control and D
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(mdata$Disease == 2)]
+  ctl <- ct_res[, i][which(mdata$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, ct_res, file = "brainCells_PD_PCx_Sub3.RData")
