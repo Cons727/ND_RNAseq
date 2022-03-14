@@ -1,0 +1,301 @@
+# ------ BRETIGEA Analysis for GSE125583-f (AD-FUS) -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/GSE125583")
+load("~/Thesis/Avances/GSE125583/AD_FUS_f_NoOutliers.RData")
+
+x <- as.data.frame(FUS_data_f)
+x <- log2(x + 1)
+#str(x, list.len = 5)
+#str(f, list.len = 5)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+# PCA can also be used
+ct_res_PCA <- brainCells(x, nMarker = 50, species = 'human', method = 'PCA')
+
+# Specific cell types can be selected with 'celltypes' argument
+
+# Estimate and adjust for brain cell type proportions in bulk expression data.
+# Users have the ability to adjust their original gene expression matrices for
+# the estimated cell type proportion estimates, in order to deconvolute the signal.
+brain_cells_adj <- adjustBrainCells(x, nMarker = 50, species = 'human')
+expression_data_adj <- brain_cells_adj$expression # matrix of adjusted gene expression values
+surrogate_proportion_values <- brain_cells_adj$SVPs
+
+all(surrogate_proportion_values == ct_res)
+# [1] TRUE
+
+
+# ------ Evaluate the effect of cell deconvolution ------
+library(limma)
+all(rownames(f) == rownames(ct_res)) # [1] TRUE
+md <- cbind(f, ct_res)
+
+#Limma for coefficients: All very important, except for age
+design2 <- model.matrix(~ 0 + ast + end + mic + neu + oli + opc + age + condition, data=md)
+vfit2 <- lmFit(x, design2)
+efit2 <- eBayes(vfit2)
+summary(decideTests(efit2))
+
+#PCA and clustering. Does not tell anything
+x_mad <- apply(x, 1, mad)
+x_pca <- prcomp(x[order(x_mad, decreasing=T)[1:2000],])
+plot(x=x_pca$rotation[,1], y=x_pca$rotation[,2], xlab="PC 1", ylab="PC 2", pch=19, col=ifelse(md$mic > 0, 1, 2), main="AST")
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(md$Disease == 2)]
+  ctl <- ct_res[, i][which(md$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/GSE125583/brainCells_GSE125583_f.RData")
+save(res, ct_res, file = "brainCells_GSE125583_f.RData")
+
+# ------ BRETIGEA Analysis for GSE125583-m (AD-FUS) -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/GSE125583")
+load("~/Thesis/Avances/GSE125583/AD_FUS_m_NoOutliers.RData")
+
+x <- as.data.frame(FUS_data_m)
+x <- log2(x + 1)
+#str(x, list.len = 5)
+#str(f, list.len = 5)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+# ------ Evaluate the effect of cell deconvolution ------
+library(limma)
+all(rownames(m) == rownames(ct_res)) # [1] TRUE
+md <- cbind(m, ct_res)
+
+#Limma for coefficients: All very important
+design2 <- model.matrix(~ 0 + ast + end + mic + neu + oli + opc + condition, data=md)
+vfit2 <- lmFit(x, design2)
+efit2 <- eBayes(vfit2)
+summary(decideTests(efit2))
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(md$Disease == 2)]
+  ctl <- ct_res[, i][which(md$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/GSE125583/brainCells_GSE125583_m.RData")
+save(res, ct_res, file = "brainCells_GSE125583_m.RData")
+
+# ------ BRETIGEA Analysis for GSE125583 Sub1-m (AD-FUS) -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/GSE125583")
+load("~/Thesis/Avances/GSE125583/AD_FUS_Sub1_m_NoOutliers.RData")
+load("~/Thesis/Avances/GSE125583/AD_FUS_m_NoOutliers.RData")
+
+case <- data.frame(Disease = rep(2, ncol(blood_data_one)), row.names = colnames(blood_data_one))
+ctrl <- data.frame(Disease = rep(1, nrow(m[m$Disease == 1, ])), row.names = rownames(m[m$Disease == 1, ]))
+samples <- rbind(ctrl, case)
+mdata <- FUS_data_m[, match(rownames(samples), colnames(FUS_data_m))]
+
+x <- as.data.frame(mdata)
+x <- log2(x + 1)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+all(colnames(mdata) == rownames(ct_res))
+mdata <- cbind(samples, ct_res)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(mdata$Disease == 2)]
+  ctl <- ct_res[, i][which(mdata$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/GSE125583/brainCells_GSE125583_Sub1_m.RData")
+save(res, ct_res, file = "brainCells_GSE125583_Sub1_m.RData")
+
+# ------ BRETIGEA Analysis for GSE125583 Sub2-m (AD-FUS) -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/GSE125583")
+load("~/Thesis/Avances/GSE125583/AD_FUS_Sub2_m_NoOutliers.RData")
+load("~/Thesis/Avances/GSE125583/AD_FUS_m_NoOutliers.RData")
+
+case <- data.frame(Disease = rep(2, ncol(blood_data_two)), row.names = colnames(blood_data_two))
+ctrl <- data.frame(Disease = rep(1, nrow(m[m$Disease == 1, ])), row.names = rownames(m[m$Disease == 1, ]))
+samples <- rbind(ctrl, case)
+mdata <- FUS_data_m[, match(rownames(samples), colnames(FUS_data_m))]
+
+x <- as.data.frame(mdata)
+x <- log2(x + 1)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+all(colnames(mdata) == rownames(ct_res))
+mdata <- cbind(samples, ct_res)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(mdata$Disease == 2)]
+  ctl <- ct_res[, i][which(mdata$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/GSE125583/brainCells_GSE125583_Sub2_m.RData")
+save(res, ct_res, file = "brainCells_GSE125583_Sub2_m.RData")
+
+# ------ BRETIGEA Analysis for GSE125583 Sub1-f (AD-FUS) -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/GSE125583")
+load("~/Thesis/Avances/GSE125583/AD_FUS_Sub1_f_NoOutliers.RData")
+load("~/Thesis/Avances/GSE125583/AD_FUS_f_NoOutliers.RData")
+
+case <- data.frame(Disease = rep(2, ncol(blood_data_one)), row.names = colnames(blood_data_one))
+ctrl <- data.frame(Disease = rep(1, nrow(f[f$Disease == 1, ])), row.names = rownames(f[f$Disease == 1, ]))
+samples <- rbind(ctrl, case)
+mdata <- FUS_data_f[, match(rownames(samples), colnames(FUS_data_f))]
+
+x <- as.data.frame(mdata)
+x <- log2(x + 1)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+all(colnames(mdata) == rownames(ct_res))
+mdata <- cbind(samples, ct_res)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(mdata$Disease == 2)]
+  ctl <- ct_res[, i][which(mdata$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/GSE125583/brainCells_GSE125583_Sub1_f.RData")
+save(res, ct_res, file = "brainCells_GSE125583_Sub1_f.RData")
+
+# ------ BRETIGEA Analysis for GSE125583 Sub2-f (AD-FUS) -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/GSE125583")
+load("~/Thesis/Avances/GSE125583/AD_FUS_Sub2_f_NoOutliers.RData")
+load("~/Thesis/Avances/GSE125583/AD_FUS_f_NoOutliers.RData")
+
+case <- data.frame(Disease = rep(2, ncol(blood_data_two)), row.names = colnames(blood_data_two))
+ctrl <- data.frame(Disease = rep(1, nrow(f[f$Disease == 1, ])), row.names = rownames(f[f$Disease == 1, ]))
+samples <- rbind(ctrl, case)
+mdata <- FUS_data_f[, match(rownames(samples), colnames(FUS_data_f))]
+
+x <- as.data.frame(mdata)
+x <- log2(x + 1)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+all(colnames(mdata) == rownames(ct_res))
+mdata <- cbind(samples, ct_res)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(mdata$Disease == 2)]
+  ctl <- ct_res[, i][which(mdata$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/GSE125583/brainCells_GSE125583_Sub2_f.RData")
+save(res, ct_res, file = "brainCells_GSE125583_Sub2_f.RData")
+
+# ------ BRETIGEA Analysis for GSE125583 Sub3-f (AD-FUS) -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/GSE125583")
+load("~/Thesis/Avances/GSE125583/AD_FUS_Sub3_f_NoOutliers.RData")
+load("~/Thesis/Avances/GSE125583/AD_FUS_f_NoOutliers.RData")
+
+case <- data.frame(Disease = rep(2, ncol(blood_data_three)), row.names = colnames(blood_data_three))
+ctrl <- data.frame(Disease = rep(1, nrow(f[f$Disease == 1, ])), row.names = rownames(f[f$Disease == 1, ]))
+samples <- rbind(ctrl, case)
+mdata <- FUS_data_f[, match(rownames(samples), colnames(FUS_data_f))]
+
+x <- as.data.frame(mdata)
+x <- log2(x + 1)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+all(colnames(mdata) == rownames(ct_res))
+mdata <- cbind(samples, ct_res)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(mdata$Disease == 2)]
+  ctl <- ct_res[, i][which(mdata$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/GSE125583/brainCells_GSE125583_Sub3_f.RData")
+save(res, ct_res, file = "brainCells_GSE125583_Sub3_f.RData")
