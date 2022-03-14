@@ -1,0 +1,107 @@
+# ------- Use non negative matrix factorization to identify outliers -f -------
+# Female
+load("AD_Front_mf_data.RData")
+library(dplyr)
+source('~/Thesis/Codes/Emmanuels/fileIO.R')
+AD_Front_f_mad <- apply(AD_Front_f, 1, mad)
+AD_Front_f_for_NMF <- t(apply(AD_Front_f[order(AD_Front_f_mad, decreasing=T)[1:2000],], 1, scale))
+colnames(AD_Front_f_for_NMF) <- colnames(AD_Front_f)
+write.gct(mat=as.data.frame(AD_Front_f_for_NMF), gct.file = "AD_Front_f_dataset_for_NMF_2000.gct")
+save(AD_Front_f_for_NMF, file="AD_Front_f_dataset_for_NMF_2000.RData")
+
+###
+#NMF
+options(stringsAsFactors=F)
+setwd("NMF")
+source("nmfconsensus.R")
+load("AD_Front_f_dataset_for_NMF_2000.RData")
+
+nmfconsensus(
+  input.ds =           "AD_Front_f_dataset_for_NMF_2000.gct",
+  k.init =             2,
+  k.final =            4,
+  num.clusterings =    100,
+  maxniter =           1000,
+  error.function =     "euclidean",
+  rseed =              1234,
+  stopconv =           40,
+  stopfreq =           10,
+  non.interactive.run = F,
+  doc.string =         "AD_Front_f_",
+  data = 				AD_Front_f_for_NMF)
+###
+
+#Revise clusters
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/Frontal/")
+load("AD_Front_mf_data.RData")
+nmf_diver_cluster_f <- read.delim("~/Thesis/Avances/Frontal/AD_Front_f_membership.gct")
+all(nmf_diver_cluster_f$Name == colnames(AD_Front_f))
+a <- nmf_diver_cluster_f[grep('CTL', nmf_diver_cluster_f$Name),]
+length(which(a$membership == 1))
+length(which(a$membership == 2))
+a <- nmf_diver_cluster_f[grep('AD', nmf_diver_cluster_f$Name),]
+length(which(a$membership == 1))
+length(which(a$membership == 2))
+# 1 hay 17 ctl, 18 AD ---- 2 hay 18 ctl, 15 AD, Then 1=AD, 2=CTL
+
+AD_Front_f_mad <- apply(AD_Front_f, 1, mad)
+AD_Front_f_pca <- prcomp(AD_Front_f[order(AD_Front_f_mad, decreasing=T)[1:2000],])
+AD_Front_clinical_f$member_class <- ifelse(AD_Front_clinical_f$disease == 1 & nmf_diver_cluster_f$membership == 2, 1, ifelse(AD_Front_clinical_f$disease == 2 & nmf_diver_cluster_f$membership == 1, 2, 3))
+plot(x=AD_Front_f_pca$rotation[,2], y=AD_Front_f_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=AD_Front_clinical_f$disease)
+plot(x=AD_Front_f_pca$rotation[,2], y=AD_Front_f_pca$rotation[,1], xlab= paste("PC 2 ", summary(AD_Front_f_pca)$importance[2,2] * 100, "%", sep = " "), ylab= paste("PC 1 ", summary(AD_Front_f_pca)$importance[2,1] * 100, "%", sep = " "), pch=19, col=AD_Front_clinical_f$member_class,
+     main = "Front-AD-f")
+
+# ------- Use non negative matrix factorization to identify outliers -m -------
+# Male
+load("AD_Front_mf_data.RData")
+library(dplyr)
+source('~/Thesis/Codes/Emmanuels/fileIO.R')
+AD_Front_m_mad <- apply(AD_Front_m, 1, mad)
+AD_Front_m_for_NMF <- t(apply(AD_Front_m[order(AD_Front_m_mad, decreasing=T)[1:2000],], 1, scale))
+colnames(AD_Front_m_for_NMF) <- colnames(AD_Front_m)
+write.gct(mat=as.data.frame(AD_Front_m_for_NMF), gct.file = "AD_Front_m_dataset_for_NMF_2000.gct")
+save(AD_Front_m_for_NMF, file="AD_Front_m_dataset_for_NMF_2000.RData")
+
+###
+#NMF
+options(stringsAsFactors=F)
+setwd("NMF")
+source("nmfconsensus.R")
+load("AD_Front_m_dataset_for_NMF_2000.RData")
+
+nmfconsensus(
+  input.ds =           "AD_Front_m_dataset_for_NMF_2000.gct",
+  k.init =             2,
+  k.final =            4,
+  num.clusterings =    100,
+  maxniter =           1000,
+  error.function =     "euclidean",
+  rseed =              1234,
+  stopconv =           40,
+  stopfreq =           10,
+  non.interactive.run = F,
+  doc.string =         "AD_Front_m_",
+  data = 				AD_Front_m_for_NMF)
+###
+
+#Revise clusters
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/Frontal/")
+load("AD_Front_mf_data.RData") 
+nmf_diver_cluster_m <- read.delim("~/Thesis/Avances/Frontal/AD_Front_m_membership.gct")
+all(nmf_diver_cluster_m$Name == colnames(AD_Front_m))
+a <- nmf_diver_cluster_m[grep('CTL', nmf_diver_cluster_m$Name),]
+length(which(a$membership == 1))
+length(which(a$membership == 2))
+a <- nmf_diver_cluster_m[grep('AD', nmf_diver_cluster_m$Name),]
+length(which(a$membership == 1))
+length(which(a$membership == 2))
+# 1 hay 20 ctl, 20 AD ---- 2 hay 49 ctl, 21 AD, Then 1=AD, 2=CTL
+
+AD_Front_m_mad <- apply(AD_Front_m, 1, mad)
+AD_Front_m_pca <- prcomp(AD_Front_m[order(AD_Front_m_mad, decreasing=T)[1:2000],])
+AD_Front_clinical_m$member_class <- ifelse(AD_Front_clinical_m$disease == 1 & nmf_diver_cluster_m$membership == 2, 1, ifelse(AD_Front_clinical_m$disease == 2 & nmf_diver_cluster_m$membership == 1, 2, 3))
+plot(x=AD_Front_m_pca$rotation[,2], y=AD_Front_m_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=AD_Front_clinical_m$disease)
+plot(x=AD_Front_m_pca$rotation[,2], y=AD_Front_m_pca$rotation[,1], xlab= paste("PC 2 ", summary(AD_Front_m_pca)$importance[2,2] * 100, "%", sep = " "), ylab= paste("PC 1 ", summary(AD_Front_m_pca)$importance[2,1] * 100, "%", sep = " "), pch=19, col=AD_Front_clinical_m$member_class,
+     main = "Front-AD-m")
