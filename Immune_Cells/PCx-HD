@@ -1,0 +1,44 @@
+# ------- Order samples and save for CIBERSORTx -------
+load("HD_PCx_data.RData")
+HD_PCx_consensus.k.2 <- read.delim("~/Thesis/Avances/PCx-HD/HD_PCx_consensus.k.2.gct")
+nmf_diver_cluster <- HD_PCx_consensus.k.2[match(rownames(HD_PCx_clinical), HD_PCx_consensus.k.2$Name),]
+HD_PCx_clinical$member_class <- ifelse(HD_PCx_clinical$disease == 1 & nmf_diver_cluster$membership == 2, 1, ifelse(HD_PCx_clinical$disease == 2 & nmf_diver_cluster$membership == 1, 2, 3))
+HD <- HD_PCx_clinical[-which(HD_PCx_clinical$member_class == 3),]
+HD <- HD[order(HD$disease),]
+HD_data <- HD_PCx_dataset_qn_combat[,-which(HD_PCx_clinical$member_class == 3)]
+HD_data <- HD_data[, match(rownames(HD), colnames(HD_data))]
+HD_data <- 2 ^ HD_data
+gene <- data.frame(gene = rownames(HD_data))
+HD_data_ciberstort <- cbind(gene, HD_data)
+
+save(HD, HD_data, file="HD_PCx_NoOutliers.RData")
+write.table(HD_data_ciberstort, file = "HD_PCx_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+# ------- CIBERSORT immune cells HD-PCx -------
+library(limma)
+
+setwd("~/Thesis/Avances/PCx-HD")
+load("~/Thesis/Avances/PCx-HD/HD_PCx_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/PCx-HD/CIBERSORTx_Job14_Adjusted.txt")
+
+x <- as.data.frame(HD_data)
+x <- log2(x + 1)
+
+all(rownames(HD) == CIBERSORTx$Mixture) # [1] TRUE
+md <- cbind(CIBERSORTx[,c(-1,-24,-25,-26)], HD)
+
+# t-test between Control and AD
+res <- data.frame(HD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$disease == 2)]
+  ctl <- md[, i][which(md$disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)[c(-1,-24,-25,-26)]
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "immuneCells_HD-PCx.RData")
