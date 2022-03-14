@@ -1,0 +1,33 @@
+# ------- Order samples and save for CIBERSORTx -f -------
+# Female
+setwd("~/Thesis/Avances/GSE125583/")
+load("FUS_mf_data.RData")
+nmf_diver_cluster_f <- read.delim("~/Thesis/Avances/GSE125583/FUS_f_membership.gct")
+FUS_clinical_f$member_class <- ifelse(FUS_clinical_f$Disease == 1 & nmf_diver_cluster_f$membership == 2, 1, ifelse(FUS_clinical_f$Disease == 2 & nmf_diver_cluster_f$membership == 1, 2, 3))
+f <- FUS_clinical_f[-which(FUS_clinical_f$member_class == 3),]
+f <- f[order(f$Disease),]
+FUS_data_f <- FUS_f[,-which(FUS_clinical_f$member_class == 3)]
+FUS_data_f <- FUS_data_f[, match(rownames(f), colnames(FUS_data_f))]
+FUS_data_f <- 2 ^ FUS_data_f
+gene <- data.frame(gene = rownames(FUS_data_f))
+FUS_data_f_cibersort <- cbind(gene, FUS_data_f)
+
+save(f, FUS_data_f, file="AD_FUS_f_NoOutliers.RData")
+write.table(FUS_data_f_cibersort, file = "FUS_f_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+# ------- Order samples and save for CIBERSORTx -m -------
+# Male
+setwd("~/Thesis/Avances/GSE125583/")
+load("FUS_mf_data.RData")
+nmf_diver_cluster_m <- read.delim("~/Thesis/Avances/GSE125583/FUS_m_membership.gct")
+FUS_clinical_m$member_class <- ifelse(FUS_clinical_m$Disease == 1 & nmf_diver_cluster_m$membership == 2, 1, ifelse(FUS_clinical_m$Disease == 2 & nmf_diver_cluster_m$membership == 1, 2, 3))
+m <- FUS_clinical_m[-which(FUS_clinical_m$member_class == 3),]
+m <- m[order(m$Disease),]
+FUS_data_m <- FUS_m[,-which(FUS_clinical_m$member_class == 3)]
+FUS_data_m <- FUS_data_m[, match(rownames(m), colnames(FUS_data_m))]
+FUS_data_m <- 2 ^ FUS_data_m
+gene <- data.frame(gene = rownames(FUS_data_m))
+FUS_data_m_cibersort <- cbind(gene, FUS_data_m)
+
+save(m, FUS_data_m, file="AD_FUS_m_NoOutliers.RData")
+write.table(FUS_data_m_cibersort, file = "FUS_m_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
