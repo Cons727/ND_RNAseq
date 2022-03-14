@@ -1,0 +1,33 @@
+# ------- Order samples and save for CIBERSORTx -f -------
+# Female
+setwd("~/Thesis/Avances/Temporal/")
+load("AD_TCx_mf_data.RData")
+nmf_diver_cluster_f <- read.delim("~/Thesis/Avances/Temporal/AD_TCx_f_membership.gct")
+AD_TCx_clinical_f$member_class <- ifelse(AD_TCx_clinical_f$disease == 1 & nmf_diver_cluster_f$membership == 2, 1, ifelse(AD_TCx_clinical_f$disease == 2 & nmf_diver_cluster_f$membership == 1, 2, 3))
+AD_f <- AD_TCx_clinical_f[-which(AD_TCx_clinical_f$member_class == 3),]
+AD_f <- AD_f[order(AD_f$disease),]
+AD_TCx_data_f <- AD_TCx_f[,-which(AD_TCx_clinical_f$member_class == 3)]
+AD_TCx_data_f <- AD_TCx_data_f[, match(rownames(AD_f), colnames(AD_TCx_data_f))]
+AD_TCx_data_f <- 2 ^ AD_TCx_data_f
+gene <- data.frame(gene = rownames(AD_TCx_data_f))
+AD_TCx_data_f_cibersort <- cbind(gene, AD_TCx_data_f)
+
+save(AD_f, AD_TCx_data_f, file="AD_Temp_f_NoOutliers.RData")
+write.table(AD_TCx_data_f_cibersort, file = "AD_Temp_f_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+# ------- Order samples and save for CIBERSORTx -m -------
+# Male
+setwd("~/Thesis/Avances/Temporal/")
+load("AD_TCx_mf_data.RData")
+nmf_diver_cluster_m <- read.delim("~/Thesis/Avances/Temporal/AD_TCx_m_membership.gct")
+AD_TCx_clinical_m$member_class <- ifelse(AD_TCx_clinical_m$disease == 1 & nmf_diver_cluster_m$membership == 1, 1, ifelse(AD_TCx_clinical_m$disease == 2 & nmf_diver_cluster_m$membership == 2, 2, 3))
+AD_m <- AD_TCx_clinical_m[-which(AD_TCx_clinical_m$member_class == 3),]
+AD_m <- AD_m[order(AD_m$disease),]
+AD_TCx_data_m <- AD_TCx_m[,-which(AD_TCx_clinical_m$member_class == 3)]
+AD_TCx_data_m <- AD_TCx_data_m[, match(rownames(AD_m), colnames(AD_TCx_data_m))]
+AD_TCx_data_m <- 2 ^ AD_TCx_data_m
+gene <- data.frame(gene = rownames(AD_TCx_data_m))
+AD_TCx_data_m_cibersort <- cbind(gene, AD_TCx_data_m)
+
+save(AD_m, AD_TCx_data_m, file="AD_Temp_m_NoOutliers.RData")
+write.table(AD_TCx_data_m_cibersort, file = "AD_Temp_m_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
