@@ -1,0 +1,91 @@
+# ------- Order samples and save for CIBERSORTx -f -------
+# Female
+setwd("~/Thesis/Avances/Hippocampus/")
+load("AD_HIP_mf_data.RData")
+nmf_diver_cluster_f <- read.delim("~/Thesis/Avances/Hippocampus/AD_HIP_f_membership.gct")
+AD_HIP_clinical_f$member_class <- ifelse(AD_HIP_clinical_f$disease == 1 & nmf_diver_cluster_f$membership == 1, 1, ifelse(AD_HIP_clinical_f$disease == 2 & nmf_diver_cluster_f$membership == 2, 2, 3))
+AD_f <- AD_HIP_clinical_f[-which(AD_HIP_clinical_f$member_class == 3),]
+AD_f <- AD_f[order(AD_f$disease),]
+AD_HIP_data_f <- AD_HIP_f[,-which(AD_HIP_clinical_f$member_class == 3)]
+AD_HIP_data_f <- AD_HIP_data_f[, match(rownames(AD_f), colnames(AD_HIP_data_f))]
+AD_HIP_data_f <- 2 ^ AD_HIP_data_f
+gene <- data.frame(gene = rownames(AD_HIP_data_f))
+AD_HIP_data_f_cibersort <- cbind(gene, AD_HIP_data_f)
+
+save(AD_HIP_data_f, AD_f, file="AD_HIP_f_NoOutliers.RData")
+write.table(AD_HIP_data_f_cibersort, file = "AD_HIP_f_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+# ------- Order samples and save for CIBERSORTx -m -------
+# Male
+setwd("~/Thesis/Avances/Hippocampus/")
+load("AD_HIP_mf_data.RData")
+nmf_diver_cluster_m <- read.delim("~/Thesis/Avances/Hippocampus/AD_HIP_m_membership.gct")
+AD_HIP_clinical_m$member_class <- ifelse(AD_HIP_clinical_m$disease == 1 & nmf_diver_cluster_m$membership == 1, 1, ifelse(AD_HIP_clinical_m$disease == 2 & nmf_diver_cluster_m$membership == 2, 2, 3))
+AD_m <- AD_HIP_clinical_m[-which(AD_HIP_clinical_m$member_class == 3),]
+AD_m <- AD_m[order(AD_m$disease),]
+AD_HIP_data_m <- AD_HIP_m[,-which(AD_HIP_clinical_m$member_class == 3)]
+AD_HIP_data_m <- AD_HIP_data_m[, match(rownames(AD_m), colnames(AD_HIP_data_m))]
+AD_HIP_data_m <- 2 ^ AD_HIP_data_m
+gene <- data.frame(gene = rownames(AD_HIP_data_m))
+AD_HIP_data_m_cibersort <- cbind(gene, AD_HIP_data_m)
+
+save(AD_m, AD_HIP_data_m, file="AD_HIP_m_NoOutliers.RData")
+write.table(AD_HIP_data_m_cibersort, file = "AD_HIP_m_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+# ------- CIBERSORT immune cells AD-Hip-f -------
+library(limma)
+
+setwd("~/Thesis/Avances/Hippocampus")
+load("~/Thesis/Avances/Hippocampus/AD_HIP_f_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/Hippocampus/CIBERSORTx_Job9_f_Adjusted.txt")
+
+x <- as.data.frame(AD_HIP_data_f)
+x <- log2(x + 1)
+
+all(rownames(AD_f) == CIBERSORTx$Mixture) # [1] TRUE
+md <- cbind(CIBERSORTx[,c(-1,-24,-25,-26)], AD_f)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$disease == 2)]
+  ctl <- md[, i][which(md$disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)[c(-1,-24,-25,-26)]
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "immuneCells_AD-HIP_f.RData")
+
+# ------- CIBERSORT immune cells AD-Hip-m -------
+library(limma)
+
+setwd("~/Thesis/Avances/Hippocampus")
+load("~/Thesis/Avances/Hippocampus/AD_HIP_m_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/Hippocampus/CIBERSORTx_Job10_m_Adjusted.txt")
+
+x <- as.data.frame(AD_HIP_data_m)
+x <- log2(x + 1)
+
+all(rownames(AD_m) == CIBERSORTx$Mixture) # [1] TRUE
+md <- cbind(CIBERSORTx[,c(-1,-24,-25,-26)], AD_m)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$disease == 2)]
+  ctl <- md[, i][which(md$disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)[c(-1,-24,-25,-26)]
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "immuneCells_AD-HIP_m.RData")
