@@ -1,0 +1,63 @@
+# ------- Integrate datasets -------
+load("../GSE125050/GSE125050_data.RData")
+clinical_data_GSE125050 <- metadata1
+data_GSE125050 <- normalized_counts
+data_GSE125050 <- log2(data_GSE125050 + 1)
+all(colnames(data_GSE125050) == rownames(clinical_data_GSE125050))
+
+load("../AIBS/AIBS_data.RData")
+clinical_data_AIBS <- AIBS_metadata
+clinical_data_AIBS <- clinical_data_AIBS[grep("FWM", clinical_data_AIBS$sample),]
+data_AIBS <- x_norm_f
+data_AIBS <- data_AIBS[, grep("FWM", colnames(data_AIBS))]
+clinical_data_AIBS <- clinical_data_AIBS[match(colnames(data_AIBS), clinical_data_AIBS$sample),]
+all(colnames(data_AIBS) == clinical_data_AIBS$sample)
+
+#Common genes
+common_genes <- sort(intersect(rownames(data_AIBS), rownames(data_GSE125050)))
+AD_Front_dataset <- cbind(data_AIBS[common_genes,], data_GSE125050[common_genes,])
+
+#Pre-processing
+png(filename = "AD-Front-densities_before.png", width = 800, height = 800)
+plotDensities(AD_Front_dataset, legend=F)
+dev.off()
+AD_Front_dataset_qn <- normalize.quantiles(AD_Front_dataset)
+colnames(AD_Front_dataset_qn) <- colnames(AD_Front_dataset)
+rownames(AD_Front_dataset_qn) <- rownames(AD_Front_dataset)
+png(filename = "AD-Front-densities_after.png", width = 800, height = 800)
+plotDensities(AD_Front_dataset_qn, legend=F)
+dev.off()
+
+AD_Front_clinical <- data.frame(batch=c(rep(1, ncol(data_AIBS)), rep(2, ncol(data_GSE125050))), disease=c(ifelse(clinical_data_AIBS$condition == "CTL", 1, 2), ifelse(clinical_data_GSE125050$condition == "CTL", 1, 2)))
+AD_Front_clinical$disease <- as.factor(AD_Front_clinical$disease)
+AD_Front_clinical$batch <- as.factor(AD_Front_clinical$batch)
+AD_Front_clinical$Sex <- as.factor(c(clinical_data_AIBS$sex, clinical_data_GSE125050$sex))
+AD_Front_clinical$Age <- c(clinical_data_AIBS$age, clinical_data_GSE125050$age)
+AD_Front_clinical$Braak <- as.factor(c(clinical_data_AIBS$braak, clinical_data_GSE125050$braak))
+rownames(AD_Front_clinical) <- c(clinical_data_AIBS$sample, rownames(clinical_data_GSE125050))
+
+#PCA
+AD_Front_dataset_qn_mad <- apply(AD_Front_dataset_qn, 1, mad)
+AD_Front_dataset_qn_pca <- prcomp(AD_Front_dataset_qn[order(AD_Front_dataset_qn_mad, decreasing=T)[1:2000],])
+png("PCA_before_AD-Front.png", width = 8, height = 8, units = 'in', res = 200)
+plot(x=AD_Front_dataset_qn_pca$rotation[,2], y=AD_Front_dataset_qn_pca$rotation[,1], ylab=paste("PC2 (", round(summary(AD_Front_dataset_qn_pca)$importance[2,2]*100), "%)"), xlab=paste("PC1 (", round(summary(AD_Front_dataset_qn_pca)$importance[2,1]*100), "%)"), pch=19, col=AD_Front_clinical$batch, main="Front-AD before ComBat")
+legend("topright", legend = c("Batch 1", "Batch 2"), col = c(1, 2), pch = 19, bty = "n", pt.cex = 2, cex = 1.5, inset = c(0.02, 0.02))
+dev.off()
+plot(x=AD_Front_dataset_qn_pca$rotation[,2], y=AD_Front_dataset_qn_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=AD_Front_clinical$disease)
+
+#Combat
+modcombat <- model.matrix(~1, data=data.frame(cmb=AD_Front_clinical$batch))
+AD_Front_dataset_qn_combat <- ComBat(dat=AD_Front_dataset_qn, batch=AD_Front_clinical$batch, mod=modcombat, par.prior=TRUE, prior.plots=FALSE)
+AD_Front_dataset_qn_combat_mad <- apply(AD_Front_dataset_qn_combat, 1, mad)
+AD_Front_dataset_qn_combat_pca <- prcomp(AD_Front_dataset_qn_combat[order(AD_Front_dataset_qn_combat_mad, decreasing=T)[1:2000],])
+png("PCA_after_AD-Front.png", width = 8, height = 8, units = 'in', res = 200)
+plot(x=AD_Front_dataset_qn_combat_pca$rotation[,2], y=AD_Front_dataset_qn_combat_pca$rotation[,1], ylab=paste("PC2 (", round(summary(AD_Front_dataset_qn_combat_pca)$importance[2,2]*100), "%)"), xlab=paste("PC1 (", round(summary(AD_Front_dataset_qn_combat_pca)$importance[2,1]*100), "%)"), pch=19, col=AD_Front_clinical$batch, main="Front-AD after ComBat")
+legend("topright", legend = c("Batch 1", "Batch 2"), col = c(1, 2), pch = 19, bty = "n", pt.cex = 2, cex = 1.5, inset = c(0.02, 0.02))
+dev.off()
+plot(x=AD_Front_dataset_qn_combat_pca$rotation[,2], y=AD_Front_dataset_qn_combat_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=AD_Front_clinical$disease, main="By condition")
+plot(x=AD_Front_dataset_qn_combat_pca$rotation[,2], y=AD_Front_dataset_qn_combat_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=ifelse(AD_Front_clinical$Sex == 'M', 1, 2), main="By sex")
+plot(x=AD_Front_dataset_qn_combat_pca$rotation[,2], y=AD_Front_dataset_qn_combat_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=AD_Front_clinical$Braak, main="By Braak score")
+plot(x=AD_Front_dataset_qn_combat_pca$rotation[,2], y=AD_Front_dataset_qn_combat_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=AD_Front_clinical$Age, main="By age")
+
+#Save AD_Painson compound dataset
+save(AD_Front_dataset_qn_combat, AD_Front_clinical, file="AD_Front_data.RData")
