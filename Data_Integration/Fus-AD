@@ -1,0 +1,75 @@
+#----------DE Analysis GSE125583: FUS with AD: Counts----------
+# Article analyzed in log2(RPKM+1)
+GSE125583 <- read.csv("C:/Users/const/AppData/Local/Packages/CanonicalGroupLimited.Ubuntu16.04onWindows_79rhkp1fndgsc/LocalState/rootfs/home/ubuntu/workspace/practice/Counts/GSE125583_matrix.csv", row.names=1)
+colnames(GSE125583) <- str_replace(colnames(GSE125583), pattern="_.tsv", replacement="")
+
+CDGSE125583 <- read.delim("~/Thesis/Avances/GSE125583/CDGSE125583.txt")
+clinical_data <-  data.frame(CDGSE125583[,-1], row.names=CDGSE125583[,1])
+clinical_data$Disease <- ifelse(clinical_data$condition == "CTL", 1, 2)
+all(colnames(GSE125583) == rownames(clinical_data))
+clinical_data$sex <- as.factor(clinical_data$sex)
+clinical_data$condition <- as.factor(clinical_data$condition)
+
+# Transform data to Log2(X + 1) and plot density
+x <- GSE125583 + 1
+x <- log2(x)
+
+nsamples <- ncol(x)
+plot(density(x[,1]), lwd=2, las=2, main="", xlab="")
+for (i in 1:nsamples){
+  den <- density(x[,i])
+  lines(den$x, den$y, lwd=2)
+}
+title(main="Distribution of log2CPM data")
+
+# Filter genes which are mostly 0 and plot density
+x_f <- x[rowMeans(x > 0) > 0.7, ]
+
+plot(density(x_f[,1]), lwd=2, las=2, main="", xlab="")
+for (i in 1:nsamples){
+  den <- density(x_f[,i])
+  lines(den$x, den$y, lwd=2)
+}
+title(main="Distribution of filtered data")
+
+png(filename = "AD-Fus-densities_before.png", width = 800, height = 800)
+plotDensities(x_f, legend=F)
+dev.off()
+
+# Convert to matrix
+rowgenes <- rownames(x_f)
+x_f <- as.matrix(sapply(x_f, as.numeric))
+colnames(x_f) <- colnames(x)
+rownames(x_f) <- rowgenes
+
+# Quantile normalization and plot density
+x_norm_f <- normalize.quantiles(x_f)
+colnames(x_norm_f) <- colnames(x_f)
+rownames(x_norm_f) <- rowgenes
+
+plot(density(x_norm_f[,1]), lwd=2, las=2, main="", xlab="")
+for (i in 1:nsamples){
+  den <- density(x_norm_f[,i])
+  lines(den$x, den$y, lwd=2)
+}
+title(main="Distribution normalized by quantiles")
+
+png(filename = "AD-Fus-densities_after.png", width = 800, height = 800)
+plotDensities(x_norm_f, legend=F)
+dev.off()
+
+#PCA and clustering
+fpkm_mad <- apply(x_norm_f, 1, mad)
+fpkm_pca <- prcomp(x_norm_f[order(fpkm_mad, decreasing=T)[1:2000],])
+plot(x=fpkm_pca$rotation[,1], y=fpkm_pca$rotation[,2], xlab="PC 1", ylab="PC 2", pch=19, col=ifelse(clinical_data$condition == 'CTL', 1, 2))
+plot(x=fpkm_pca$rotation[,1], y=fpkm_pca$rotation[,2], xlab="PC 1", ylab="PC 2", pch=19, col=ifelse(clinical_data$sex == 'M', 1, 2))
+plot(x=fpkm_pca$rotation[,1], y=fpkm_pca$rotation[,2], xlab="PC 1", ylab="PC 2", pch=19, col=clinical_data$age)
+
+#Limma for coefficients: All very important
+design2 <- model.matrix(~ 0 + sex + age + condition, data=clinical_data)
+vfit2 <- lmFit(x_norm_f, design2)
+efit2 <- eBayes(vfit2)
+summary(decideTests(efit2))
+
+#Save PD AM dataset
+save(x_norm_f, clinical_data, file="GSE125583_data.RData")
