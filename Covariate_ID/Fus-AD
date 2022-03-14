@@ -1,0 +1,34 @@
+#Limma for coefficients: All very important
+design2 <- model.matrix(~ 0 + sex + age + condition, data=clinical_data)
+vfit2 <- lmFit(x_norm_f, design2)
+efit2 <- eBayes(vfit2)
+summary(decideTests(efit2))
+
+#Save PD AM dataset
+save(x_norm_f, clinical_data, file="GSE125583_data.RData")
+
+#Limma all
+limma_FUS <- limma4DS_fdr(x_norm_f, clinical_data$Disease - 1, classes_names=c("AD","Control"))
+limma_FUS_up <- rownames(limma_FUS)[which(limma_FUS$FC > 0 & limma_FUS$q.value <= 0.05)]
+limma_FUS_dw <- rownames(limma_FUS)[which(limma_FUS$FC < 0 & limma_FUS$q.value <= 0.05)]
+length(limma_FUS_up) # 0 DE genes
+length(limma_FUS_dw) # 0 DE genes
+
+# ------- Divide by sex -------
+# Female
+FUS_f <- x_norm_f[,which(clinical_data$sex == 'F')]
+FUS_clinical_f <- clinical_data[which(clinical_data$sex == 'F'),]
+FUS_f_mad <- apply(FUS_f, 1, mad)
+FUS_f_pca <- prcomp(FUS_f[order(FUS_f_mad, decreasing=T)[1:2000],])
+plot(x=FUS_f_pca$rotation[,1], y=FUS_f_pca$rotation[,2], xlab="PC 1", ylab="PC 2", pch=19, col=FUS_clinical_f$Disease)
+
+# Male
+FUS_m <- x_norm_f[,which(clinical_data$sex == 'M')]
+FUS_clinical_m <- clinical_data[which(clinical_data$sex == 'M'),]
+FUS_m_mad <- apply(FUS_m, 1, mad)
+FUS_m_pca <- prcomp(FUS_m[order(FUS_m_mad, decreasing=T)[1:2000],])
+plot(x=FUS_m_pca$rotation[,1], y=FUS_m_pca$rotation[,2], xlab="PC 1", ylab="PC 2", pch=19, col=FUS_clinical_m$Disease)
+
+# Save
+save(FUS_clinical_f, FUS_clinical_m, FUS_f, FUS_m, file = "FUS_mf_data.RData")
+
