@@ -1,0 +1,60 @@
+# ------- Integrate datasets -------
+load("../AIBS/AIBS_data.RData")
+clinical_data_AIBS <- AIBS_metadata
+clinical_data_AIBS$sample <- str_replace(clinical_data_AIBS$sample, pattern="PCx", replacement="PaCx")
+clinical_data_AIBS <- clinical_data_AIBS[grep("PaCx", clinical_data_AIBS$sample),]
+data_AIBS <- x_norm_f
+data_AIBS <- data_AIBS[, grep("PaCx", colnames(data_AIBS))]
+clinical_data_AIBS <- clinical_data_AIBS[match(colnames(data_AIBS), clinical_data_AIBS$sample),]
+all(colnames(data_AIBS) == clinical_data_AIBS$sample)
+  
+load("../GSE144254/GSE144254_data.RData")
+clinical_data_GSE144254 <- metadata
+x_GSE144254 <- x_norm_f
+all(colnames(x_GSE144254) == clinical_data_GSE144254$sample)
+
+#Common genes
+common_genes <- sort(intersect(rownames(data_AIBS), rownames(x_GSE144254)))
+AD_Pa_dataset <- cbind(data_AIBS[common_genes,], x_GSE144254[common_genes,])
+
+#Pre-processing
+png(filename = "AD-Pa-densities_before.png", width = 800, height = 800)
+plotDensities(AD_Pa_dataset, legend=F)
+dev.off()
+AD_Pa_dataset_qn <- normalize.quantiles(AD_Pa_dataset)
+colnames(AD_Pa_dataset_qn) <- colnames(AD_Pa_dataset)
+rownames(AD_Pa_dataset_qn) <- rownames(AD_Pa_dataset)
+png(filename = "AD-Pa-densities_after.png", width = 800, height = 800)
+plotDensities(AD_Pa_dataset_qn, legend=F)
+dev.off()
+
+AD_Pa_clinical <- data.frame(batch=c(rep(1, ncol(data_AIBS)), rep(2, ncol(x_GSE144254))), disease=c(ifelse(clinical_data_AIBS$condition == "CTL", 1, 2), ifelse(clinical_data_GSE144254$condition == "Control", 1, 2)))
+AD_Pa_clinical$Sex <- c(clinical_data_AIBS$sex, clinical_data_GSE144254$sex)
+AD_Pa_clinical$Age <- c(clinical_data_AIBS$age, clinical_data_GSE144254$age)
+AD_Pa_clinical$Braak <- c(clinical_data_AIBS$braak, clinical_data_GSE144254$braak)
+rownames(AD_Pa_clinical) <- c(clinical_data_AIBS$sample, clinical_data_GSE144254$sample)
+
+#PCA
+AD_Pa_dataset_qn_mad <- apply(AD_Pa_dataset_qn, 1, mad)
+AD_Pa_dataset_qn_pca <- prcomp(AD_Pa_dataset_qn[order(AD_Pa_dataset_qn_mad, decreasing=T)[1:2000],])
+png("PCA_before_AD-Pa.png", width = 8, height = 8, units = 'in', res = 200)
+plot(x=AD_Pa_dataset_qn_pca$rotation[,2], y=AD_Pa_dataset_qn_pca$rotation[,1], ylab=paste("PC2 (", round(summary(AD_Pa_dataset_qn_pca)$importance[2,2]*100), "%)"), xlab=paste("PC1 (", round(summary(AD_Pa_dataset_qn_pca)$importance[2,1]*100), "%)"), pch=19, col=AD_Pa_clinical$batch, main="Pa-AD before ComBat")
+legend("bottomright", legend = c("Batch 1", "Batch 2"), col = c(1, 2), pch = 19, bty = "n", pt.cex = 2, cex = 1.5, inset = c(0.02, 0.02))
+dev.off()
+plot(x=AD_Pa_dataset_qn_pca$rotation[,2], y=AD_Pa_dataset_qn_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=AD_Pa_clinical$disease)
+
+#Combat
+modcombat <- model.matrix(~1, data=data.frame(cmb=AD_Pa_clinical$batch))
+AD_Pa_dataset_qn_combat <- ComBat(dat=AD_Pa_dataset_qn, batch=AD_Pa_clinical$batch, mod=modcombat, par.prior=TRUE, prior.plots=FALSE)
+AD_Pa_dataset_qn_combat_mad <- apply(AD_Pa_dataset_qn_combat, 1, mad)
+AD_Pa_dataset_qn_combat_pca <- prcomp(AD_Pa_dataset_qn_combat[order(AD_Pa_dataset_qn_combat_mad, decreasing=T)[1:2000],])
+png("PCA_after_AD-Pa.png", width = 8, height = 8, units = 'in', res = 200)
+plot(x=AD_Pa_dataset_qn_combat_pca$rotation[,2], y=AD_Pa_dataset_qn_combat_pca$rotation[,1], ylab=paste("PC2 (", round(summary(AD_Pa_dataset_qn_combat_pca)$importance[2,2]*100), "%)"), xlab=paste("PC1 (", round(summary(AD_Pa_dataset_qn_combat_pca)$importance[2,1]*100), "%)"), pch=19, col=AD_Pa_clinical$batch, main="Pa-AD after ComBat")
+legend("bottomright", legend = c("Batch 1", "Batch 2"), col = c(1, 2), pch = 19, bty = "n", pt.cex = 2, cex = 1.5, inset = c(0.02, 0.02))
+dev.off()
+plot(x=AD_Pa_dataset_qn_combat_pca$rotation[,2], y=AD_Pa_dataset_qn_combat_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=AD_Pa_clinical$disease)
+plot(x=AD_Pa_dataset_qn_combat_pca$rotation[,2], y=AD_Pa_dataset_qn_combat_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=ifelse(AD_Pa_clinical$Sex == 'M', 1, 2))
+plot(x=AD_Pa_dataset_qn_combat_pca$rotation[,2], y=AD_Pa_dataset_qn_combat_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=AD_Pa_clinical$Braak)
+
+#Save AD_Painson compound dataset
+save(AD_Pa_dataset_qn_combat, AD_Pa_clinical, file="AD_Pa_data.RData")
