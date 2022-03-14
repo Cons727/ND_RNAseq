@@ -14,6 +14,31 @@ blood_data_m_cibersort <- cbind(gene, blood_data_m)
 save(bHD_m, blood_data_m, file = "HD_blood_m_NoOutliers.RData")
 write.table(blood_data_m_cibersort, file = "blood_HD_m_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
 
+# -------- Order samples and save for CIBERSORTx Sub-m -------
+load("HD_blood_m_NoOutliers.RData")
+clinical_case <- bHD_m[bHD_m$disease == 2,]
+clinical_ctl <- bHD_m[bHD_m$disease == 1,]
+nmf_diver_cluster_f <- read.delim("~/Thesis/Avances/Blood/HD_blood_m_subtype_membership.gct")
+all(rownames(clinical_case) == nmf_diver_cluster_f$Name)
+
+clinical_case$member_class <- nmf_diver_cluster_f$membership
+clinical_case <- clinical_case[order(clinical_case$member_class), ]
+blood_data_one <- clinical_case[which(clinical_case$member_class == 1), ]
+blood_data_one <- blood_data_m[, match(rownames(blood_data_one), colnames(blood_data_m))]
+gene <- data.frame(gene = rownames(blood_data_one))
+blood_data_f_cibersort <- cbind(gene, blood_data_one)
+
+save(blood_data_one, file = "HD_blood_Sub1_m_NoOutliers.RData")
+write.table(blood_data_f_cibersort, file = "blood_HD_Sub1_m_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+blood_data_two <- clinical_case[which(clinical_case$member_class == 2), ]
+blood_data_two <- blood_data_m[, match(rownames(blood_data_two), colnames(blood_data_m))]
+gene <- data.frame(gene = rownames(blood_data_two))
+blood_data_f_cibersort <- cbind(gene, blood_data_two)
+
+save(blood_data_two, file = "HD_blood_Sub2_m_NoOutliers.RData")
+write.table(blood_data_f_cibersort, file = "blood_HD_Sub2_m_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
 # -------- Order samples and save for CIBERSORTx -f -------
 # Female
 load("~/Thesis/Avances/Blood/bloodsHD_mf.RData")
@@ -29,3 +54,36 @@ blood_data_f_cibersort <- cbind(gene, blood_data_f)
 
 save(bHD_f, blood_data_f, file = "HD_blood_f_NoOutliers.RData")
 write.table(blood_data_f_cibersort, file = "blood_HD_f_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+# -------- Order samples and save for CIBERSORTx Sub-f -------
+load("HD_blood_f_NoOutliers.RData")
+clinical_case <- bHD_f[bHD_f$disease == 2,]
+clinical_ctl <- bHD_f[bHD_f$disease == 1,]
+nmf_diver_cluster_f <- read.delim("~/Thesis/Avances/Blood/HD_blood_f_subtype_membership.gct")
+all(rownames(clinical_case) == nmf_diver_cluster_f$Name)
+
+clinical_case$member_class <- nmf_diver_cluster_f$membership.1
+clinical_case <- clinical_case[order(clinical_case$member_class), ]
+blood_data_one <- clinical_case[which(clinical_case$member_class == 1), ]
+blood_data_one <- blood_data_f[, match(rownames(blood_data_one), colnames(blood_data_f))]
+gene <- data.frame(gene = rownames(blood_data_one))
+blood_data_f_cibersort <- cbind(gene, blood_data_one)
+
+save(blood_data_one, file = "HD_blood_Sub1_f_NoOutliers.RData")
+write.table(blood_data_f_cibersort, file = "blood_HD_Sub1_f_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+blood_data_two <- clinical_case[which(clinical_case$member_class == 2), ]
+blood_data_two <- blood_data_f[, match(rownames(blood_data_two), colnames(blood_data_f))]
+gene <- data.frame(gene = rownames(blood_data_two))
+blood_data_f_cibersort <- cbind(gene, blood_data_two)
+
+save(blood_data_two, file = "HD_blood_Sub2_f_NoOutliers.RData")
+write.table(blood_data_f_cibersort, file = "blood_HD_Sub2_f_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+blood_data_three <- clinical_case[which(clinical_case$member_class == 3), ]
+blood_data_three <- blood_data_f[, match(rownames(blood_data_three), colnames(blood_data_f))]
+gene <- data.frame(gene = rownames(blood_data_three))
+blood_data_f_cibersort <- cbind(gene, blood_data_three)
+
+save(blood_data_three, file = "HD_blood_Sub3_f_NoOutliers.RData")
+write.table(blood_data_f_cibersort, file = "blood_HD_Sub3_f_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
