@@ -1,0 +1,80 @@
+# ------- Drug repurposing-f -------
+library(PharmacoGx)
+library(biomaRt)
+setwd("~/Thesis/Avances/GSE125583/")
+load("topTable_AD-FUS-f.RData")
+
+mart = useMart('ensembl')
+ensembl = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+gene <- getBM(attributes = c("ensembl_gene_id", "external_gene_name"), values = rownames(limma_wo_de), mart = ensembl)
+id <- match(rownames(limma_wo_de), gene$external_gene_name)
+limma_wo_de$Ensembl <- gene$ensembl_gene_id[id]
+limma_wo_de[rownames(limma_wo_de)=="KIAA1324", 6] <- "ENSG00000116299"
+limma_wo_de[rownames(limma_wo_de)=="KIAA1211L", 6] <- "ENSG00000196872"
+limma_wo_de[rownames(limma_wo_de)=="DUSP27", 6] <- "ENSG00000198842"
+limma_wo_de[rownames(limma_wo_de)=="CASC1", 6] <- "ENSG00000118307"
+limma_wo_de[rownames(limma_wo_de)=="KIAA1257", 6] <- "ENSG00000114656"
+limma_wo_de[rownames(limma_wo_de)=="CCDC36", 6] <- "ENSG00000173421"
+limma_wo_de[rownames(limma_wo_de)=="SMIM25", 6] <- "ENSG00000224397"
+limma_wo_de[rownames(limma_wo_de)=="CCL3L1", 6] <- "ENSG00000276085"
+limma_wo_de$Ensembl <- paste(limma_wo_de$Ensembl, "_at", sep="")
+Dsig <- data.frame(Features=limma_wo_de$Ensembl, Direction=limma_wo_de$logFC)
+rownames(Dsig) <- Dsig$Features
+D1<- Dsig$Direction
+names(D1) <- rownames(Dsig)
+
+availablePSets()
+drug.perturbation <- downloadPertSig("CMAP")
+
+res <-apply(drug.perturbation[,,c("tstat", "fdr")],
+            2,function(x, D1){
+              return(connectivityScore(x=x,
+                                       y=D1,
+                                       method="fgsea", nperm=100))
+            }, D1=D1)
+rownames(res) <-c("Connectivity", "P Value")
+res <-t(res)
+res.c <- res[order(res[,1], decreasing=FALSE),]
+res.p <- as.data.frame(res.c[order(res.c[,2], decreasing=FALSE),])
+
+res.p.sign <- res.p[res.p$`P Value` <= 0.05,]
+
+save(res.p.sign, file="drugPharmaGx_AD-FUS-f.RData")
+
+# ------- Drug repurposing-m -------
+library(PharmacoGx)
+library(biomaRt)
+setwd("~/Thesis/Avances/GSE125583/")
+load("topTable_AD-FUS-m.RData")
+
+mart = useMart('ensembl')
+ensembl = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+gene <- getBM(attributes = c("ensembl_gene_id", "external_gene_name"), values = rownames(limma_wo_de), mart = ensembl)
+id <- match(rownames(limma_wo_de), gene$external_gene_name)
+limma_wo_de$Ensembl <- gene$ensembl_gene_id[id]
+limma_wo_de[rownames(limma_wo_de)=="CASC1", 6] <- "ENSG00000118307"
+limma_wo_de[rownames(limma_wo_de)=="DUSP27", 6] <- "ENSG00000198842"
+limma_wo_de[rownames(limma_wo_de)=="KIAA1211L", 6] <- "ENSG00000196872"
+limma_wo_de$Ensembl <- paste(limma_wo_de$Ensembl, "_at", sep="")
+Dsig <- data.frame(Features=limma_wo_de$Ensembl, Direction=limma_wo_de$logFC)
+rownames(Dsig) <- Dsig$Features
+D1<- Dsig$Direction
+names(D1) <- rownames(Dsig)
+
+availablePSets()
+drug.perturbation <- downloadPertSig("CMAP")
+
+res <-apply(drug.perturbation[,,c("tstat", "fdr")],
+            2,function(x, D1){
+              return(connectivityScore(x=x,
+                                       y=D1,
+                                       method="fgsea", nperm=100))
+            }, D1=D1)
+rownames(res) <-c("Connectivity", "P Value")
+res <-t(res)
+res.c <- res[order(res[,1], decreasing=FALSE),]
+res.p <- as.data.frame(res.c[order(res.c[,2], decreasing=FALSE),])
+
+res.p.sign <- res.p[res.p$`P Value` <= 0.05,]
+
+save(res.p.sign, file="drugPharmaGx_AD-FUS-m.RData")
