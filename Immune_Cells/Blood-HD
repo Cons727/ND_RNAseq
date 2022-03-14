@@ -87,3 +87,246 @@ blood_data_f_cibersort <- cbind(gene, blood_data_three)
 
 save(blood_data_three, file = "HD_blood_Sub3_f_NoOutliers.RData")
 write.table(blood_data_f_cibersort, file = "blood_HD_Sub3_f_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+# ------- CIBERSORT immune cells HD-Blood-f -------
+library(limma)
+
+setwd("~/Thesis/Avances/Blood")
+load("~/Thesis/Avances/Blood/HD_blood_f_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/Blood/Cell proportions/CIBERSORTx_Job4_f_Adjusted.txt")
+
+x <- as.data.frame(blood_data_f)
+x <- log2(x + 1)
+
+all(rownames(bHD_f) == CIBERSORTx$Mixture) # [1] TRUE
+md <- cbind(CIBERSORTx[,c(-1,-24,-25,-26)], bHD_f)
+
+# t-test between Control and AD
+res <- data.frame(HD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$disease == 2)]
+  ctl <- md[, i][which(md$disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)[c(-1,-24,-25,-26)]
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "Cell proportions/immuneCells_HD-Blood_f.RData")
+
+# ------- CIBERSORT immune cells HD-Blood-m -------
+library(limma)
+
+setwd("~/Thesis/Avances/Blood")
+load("~/Thesis/Avances/Blood/HD_blood_m_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/Blood/Cell proportions/CIBERSORTx_Job3_m_Adjusted.txt")
+
+x <- as.data.frame(blood_data_m)
+x <- log2(x + 1)
+
+all(rownames(bHD_m) == CIBERSORTx$Mixture) # [1] TRUE
+md <- cbind(CIBERSORTx[,c(-1,-24,-25,-26)], bHD_m)
+
+# t-test between Control and AD
+res <- data.frame(HD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$disease == 2)]
+  ctl <- md[, i][which(md$disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)[c(-1,-24,-25,-26)]
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "Cell proportions/immuneCells_HD-Blood_m.RData")
+
+# ------- CIBERSORT immune cells HD-blood Sub1-f -------
+library(limma)
+
+setwd("~/Thesis/Avances/Blood")
+load("~/Thesis/Avances/Blood/HD_blood_f_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/Blood/Cell proportions/CIBERSORTx_Job17_Sub1-f_Adjusted.txt")
+CIBER_ctl <- read.delim("~/Thesis/Avances/Blood/Cell proportions/CIBERSORTx_Job4_f_Adjusted.txt")
+
+case <- data.frame(Disease = rep(2, nrow(CIBERSORTx)), row.names = CIBERSORTx$Mixture)
+ctrl <- data.frame(Disease = rep(1, nrow(bHD_f[bHD_f$disease == 1, ])), row.names = rownames(bHD_f[bHD_f$disease == 1, ]))
+f <- rbind(ctrl, case)
+CIBER_ctl <- CIBER_ctl[match(rownames(ctrl), CIBER_ctl$Mixture), ]
+rownames(CIBER_ctl) <- CIBER_ctl$Mixture
+CIBER_ctl <- CIBER_ctl[, c(-1,-24,-25,-26)]
+rownames(CIBERSORTx) <- CIBERSORTx$Mixture
+CIBERSORTx <- CIBERSORTx[, c(-1,-24,-25,-26)]
+samples <- rbind(CIBER_ctl, CIBERSORTx)
+
+all(rownames(f) == rownames(samples))
+md <- cbind(samples, f)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$Disease == 2)]
+  ctl <- md[, i][which(md$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "Cell proportions/immuneCells_HD_blood_Sub1-f.RData")
+
+# ------- CIBERSORT immune cells HD-blood Sub2-f -------
+library(limma)
+
+setwd("~/Thesis/Avances/Blood")
+load("~/Thesis/Avances/Blood/HD_blood_f_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/Blood/Cell proportions/CIBERSORTx_Job16_Sub2-f_Adjusted.txt")
+CIBER_ctl <- read.delim("~/Thesis/Avances/Blood/Cell proportions/CIBERSORTx_Job4_f_Adjusted.txt")
+
+case <- data.frame(Disease = rep(2, nrow(CIBERSORTx)), row.names = CIBERSORTx$Mixture)
+ctrl <- data.frame(Disease = rep(1, nrow(bHD_f[bHD_f$disease == 1, ])), row.names = rownames(bHD_f[bHD_f$disease == 1, ]))
+f <- rbind(ctrl, case)
+CIBER_ctl <- CIBER_ctl[match(rownames(ctrl), CIBER_ctl$Mixture), ]
+rownames(CIBER_ctl) <- CIBER_ctl$Mixture
+CIBER_ctl <- CIBER_ctl[, c(-1,-24,-25,-26)]
+rownames(CIBERSORTx) <- CIBERSORTx$Mixture
+CIBERSORTx <- CIBERSORTx[, c(-1,-24,-25,-26)]
+samples <- rbind(CIBER_ctl, CIBERSORTx)
+
+all(rownames(f) == rownames(samples))
+md <- cbind(samples, f)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$Disease == 2)]
+  ctl <- md[, i][which(md$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "Cell proportions/immuneCells_HD_blood_Sub2-f.RData")
+
+# ------- CIBERSORT immune cells HD-blood Sub3-f -------
+library(limma)
+
+setwd("~/Thesis/Avances/Blood")
+load("~/Thesis/Avances/Blood/HD_blood_f_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/Blood/Cell proportions/CIBERSORTx_Job15_Sub3-f_Adjusted.txt")
+CIBER_ctl <- read.delim("~/Thesis/Avances/Blood/Cell proportions/CIBERSORTx_Job4_f_Adjusted.txt")
+
+case <- data.frame(Disease = rep(2, nrow(CIBERSORTx)), row.names = CIBERSORTx$Mixture)
+ctrl <- data.frame(Disease = rep(1, nrow(bHD_f[bHD_f$disease == 1, ])), row.names = rownames(bHD_f[bHD_f$disease == 1, ]))
+f <- rbind(ctrl, case)
+CIBER_ctl <- CIBER_ctl[match(rownames(ctrl), CIBER_ctl$Mixture), ]
+rownames(CIBER_ctl) <- CIBER_ctl$Mixture
+CIBER_ctl <- CIBER_ctl[, c(-1,-24,-25,-26)]
+rownames(CIBERSORTx) <- CIBERSORTx$Mixture
+CIBERSORTx <- CIBERSORTx[, c(-1,-24,-25,-26)]
+samples <- rbind(CIBER_ctl, CIBERSORTx)
+
+all(rownames(f) == rownames(samples))
+md <- cbind(samples, f)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$Disease == 2)]
+  ctl <- md[, i][which(md$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "Cell proportions/immuneCells_HD_blood_Sub3-f.RData")
+
+# ------- CIBERSORT immune cells HD-blood Sub1-m -------
+library(limma)
+
+setwd("~/Thesis/Avances/Blood")
+load("~/Thesis/Avances/Blood/HD_blood_m_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/Blood/Cell proportions/CIBERSORTx_Job18_Sub1-m_Adjusted.txt")
+CIBER_ctl <- read.delim("~/Thesis/Avances/Blood/Cell proportions/CIBERSORTx_Job3_m_Adjusted.txt")
+
+case <- data.frame(Disease = rep(2, nrow(CIBERSORTx)), row.names = CIBERSORTx$Mixture)
+ctrl <- data.frame(Disease = rep(1, nrow(bHD_m[bHD_m$disease == 1, ])), row.names = rownames(bHD_m[bHD_m$disease == 1, ]))
+f <- rbind(ctrl, case)
+CIBER_ctl <- CIBER_ctl[match(rownames(ctrl), CIBER_ctl$Mixture), ]
+rownames(CIBER_ctl) <- CIBER_ctl$Mixture
+CIBER_ctl <- CIBER_ctl[, c(-1,-24,-25,-26)]
+rownames(CIBERSORTx) <- CIBERSORTx$Mixture
+CIBERSORTx <- CIBERSORTx[, c(-1,-24,-25,-26)]
+samples <- rbind(CIBER_ctl, CIBERSORTx)
+
+all(rownames(f) == rownames(samples))
+md <- cbind(samples, f)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$Disease == 2)]
+  ctl <- md[, i][which(md$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "Cell proportions/immuneCells_HD_blood_Sub1-m.RData")
+
+# ------- CIBERSORT immune cells HD-blood Sub2-m -------
+library(limma)
+
+setwd("~/Thesis/Avances/Blood")
+load("~/Thesis/Avances/Blood/HD_blood_m_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/Blood/Cell proportions/CIBERSORTx_Job19_Sub2-m_Adjusted.txt")
+CIBER_ctl <- read.delim("~/Thesis/Avances/Blood/Cell proportions/CIBERSORTx_Job3_m_Adjusted.txt")
+
+case <- data.frame(Disease = rep(2, nrow(CIBERSORTx)), row.names = CIBERSORTx$Mixture)
+ctrl <- data.frame(Disease = rep(1, nrow(bHD_m[bHD_m$disease == 1, ])), row.names = rownames(bHD_m[bHD_m$disease == 1, ]))
+f <- rbind(ctrl, case)
+CIBER_ctl <- CIBER_ctl[match(rownames(ctrl), CIBER_ctl$Mixture), ]
+rownames(CIBER_ctl) <- CIBER_ctl$Mixture
+CIBER_ctl <- CIBER_ctl[, c(-1,-24,-25,-26)]
+rownames(CIBERSORTx) <- CIBERSORTx$Mixture
+CIBERSORTx <- CIBERSORTx[, c(-1,-24,-25,-26)]
+samples <- rbind(CIBER_ctl, CIBERSORTx)
+
+all(rownames(f) == rownames(samples))
+md <- cbind(samples, f)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$Disease == 2)]
+  ctl <- md[, i][which(md$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "Cell proportions/immuneCells_HD_blood_Sub2-m.RData")
