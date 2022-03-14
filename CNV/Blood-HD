@@ -1,0 +1,1095 @@
+# ------- CNV all genes -f -------
+library(stringr)
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/Blood/")
+load("HD_blood_f_NoOutliers.RData")
+blood_data_f <- log2(blood_data_f + 1)
+
+gene.genecode.v35 <- read.delim("~/Thesis/Avances/gene.genecode.v35.txt", header=FALSE)
+colnames(gene.genecode.v35) <- c("Chromosome", "Start", "EnsembleID", "Type", "Name")
+rownames(blood_data_f)[which(rownames(blood_data_f) == "CASC4")] <- "GOLM2"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "FGFR1OP")] <- "CEP43"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "FOPNL")] <- "CEP20"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "GRASP")] <- "TAMALIN"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "H1FX-AS1")] <- "H1-10-AS1"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "IMPAD1")] <- "BPNT2"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "KIAA0355")] <- "GARRE1"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "KIAA1211L")] <- "CRACDL"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "KIAA1257")] <- "CFAP92"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "KIAA1324")] <- "ELAPOR1"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "KIAA1324L")] <- "ELAPOR2"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "LRMP")] <- "IRAG2"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "MRVI1")] <- "IRAG1"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "MRVI1-AS1")] <- "IRAG1-AS1"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "SSPO")] <- "SSPOP"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "WDR66")] <- "CFAP251"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "WDYHV1")] <- "NTAQ1"
+
+id <- match(rownames(blood_data_f), gene.genecode.v35$Name)
+hcs <- which(is.na(id))
+all.genes <- blood_data_f[-hcs, ]
+id <- match(rownames(all.genes), gene.genecode.v35$Name)
+genes.info <- gene.genecode.v35[id,]
+genes.info <- genes.info[order(genes.info$Start),]
+genes.info <- genes.info[str_order(genes.info$Chromosome, numeric = TRUE),]
+all.genes <- all.genes[match(genes.info$Name, rownames(all.genes)),]
+genes.info$Chromosome <- as.factor(genes.info$Chromosome)
+
+f <- factor(genes.info$Chromosome, levels = c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", 
+                                              "chr7", "chr8", "chr9", "chr10", "chr11",
+                                              "chr12", "chr13", "chr14", "chr15", "chr16",
+                                              "chr17", "chr18", "chr19", "chr20", "chr21",
+                                              "chr22", "chrX", "chrY", "chrM"))
+
+cnv.ctl <- all.genes[,bHD_f$disease == 1]
+cnv.case <- all.genes[,bHD_f$disease == 2]
+means.case <- matrix(nrow=1000, ncol=dim(cnv.case)[2])
+colnames(means.case) <- colnames(cnv.case)
+means.ctl <- matrix(nrow=1000, ncol=dim(cnv.ctl)[2])
+colnames(means.ctl) <- colnames(cnv.ctl)
+
+# fill means for control
+rows.name <- NA
+lnth <- 0
+runs <- 0
+ngene <- 0
+for (chr in levels(f)){
+  j <- 50
+  i <- 1
+  lnth <- lnth + runs
+  runs <- floor(nrow(genes.info[genes.info$Chromosome == chr,]) / 50) - 1
+  if (runs > 0){
+    for (k in 1:runs){
+      for (s in 1:ncol(cnv.ctl)){
+        means.ctl[k+lnth, s] <- mean(cnv.ctl[(i:j)+ngene, s])
+      }
+      rows.name <- c(rows.name, paste(chr, i, j, sep = "_"))
+      j <- j + 50
+      i <- i + 50
+    }
+  }
+  ngene <- ngene + nrow(genes.info[genes.info$Chromosome == chr,])
+}
+means.ctl <- na.omit(means.ctl)
+rownames(means.ctl) <- rows.name[-1]
+
+# fill means for case
+rows.name <- NA
+lnth <- 0
+runs <- 0
+ngene <- 0
+for (chr in levels(f)){
+  j <- 50
+  i <- 1
+  lnth <- lnth + runs
+  runs <- floor(nrow(genes.info[genes.info$Chromosome == chr,]) / 50) - 1
+  if (runs > 0){
+    for (k in 1:runs){
+      for (s in 1:ncol(cnv.case)){
+        means.case[k+lnth, s] <- mean(cnv.case[(i:j)+ngene, s])
+      }
+      rows.name <- c(rows.name, paste(chr, i, j, sep = "_"))
+      j <- j + 50
+      i <- i + 50
+    }
+  }
+  ngene <- ngene + nrow(genes.info[genes.info$Chromosome == chr,])
+}
+means.case <- na.omit(means.case)
+rownames(means.case) <- rows.name[-1]
+
+# ---- CNV protein genes -f ----
+gene.prot <- gene.genecode.v35[gene.genecode.v35$Type == "protein_coding", ]
+id <- match(rownames(blood_data_f), gene.prot$Name)
+hcs <- which(is.na(id)) # 338
+prot.genes <- blood_data_f[-hcs, ]
+id <- match(rownames(prot.genes), gene.prot$Name)
+genes.info <- gene.prot[id,]
+genes.info <- genes.info[order(genes.info$Start),]
+genes.info <- genes.info[str_order(genes.info$Chromosome, numeric = TRUE),]
+prot.genes <- prot.genes[match(genes.info$Name, rownames(prot.genes)),]
+
+cnv.ctl <- prot.genes[,bHD_f$disease == 1]
+cnv.case <- prot.genes[,bHD_f$disease == 2]
+means.case.prot <- matrix(nrow=1000, ncol=ncol(cnv.case))
+colnames(means.case.prot) <- colnames(cnv.case)
+means.ctl.prot <- matrix(nrow=1000, ncol=ncol(cnv.ctl))
+colnames(means.ctl.prot) <- colnames(cnv.ctl)
+
+# fill means for control
+rows.name <- NA
+lnth <- 0
+runs <- 0
+ngene <- 0
+for (chr in levels(f)){
+  j <- 50
+  i <- 1
+  lnth <- lnth + runs
+  runs <- floor(nrow(genes.info[genes.info$Chromosome == chr,]) / 50) - 1
+  if (runs > 0){
+    for (k in 1:runs){
+      for (s in 1:ncol(cnv.ctl)){
+        means.ctl.prot[k+lnth, s] <- mean(cnv.ctl[(i:j)+ngene, s])
+      }
+      rows.name <- c(rows.name, paste(chr, i, j, sep = "_"))
+      j <- j + 50
+      i <- i + 50
+    }
+  }
+  ngene <- ngene + nrow(genes.info[genes.info$Chromosome == chr,])
+}
+means.ctl.prot <- na.omit(means.ctl.prot)
+rownames(means.ctl.prot) <- rows.name[-1]
+
+# fill means for case
+rows.name <- NA
+lnth <- 0
+runs <- 0
+ngene <- 0
+for (chr in levels(f)){
+  j <- 50
+  i <- 1
+  lnth <- lnth + runs
+  runs <- floor(nrow(genes.info[genes.info$Chromosome == chr,]) / 50) - 1
+  if (runs > 0){
+    for (k in 1:runs){
+      for (s in 1:ncol(cnv.case)){
+        means.case.prot[k+lnth, s] <- mean(cnv.case[(i:j)+ngene, s])
+      }
+      rows.name <- c(rows.name, paste(chr, i, j, sep = "_"))
+      j <- j + 50
+      i <- i + 50
+    }
+  }
+  ngene <- ngene + nrow(genes.info[genes.info$Chromosome == chr,])
+}
+means.case.prot <- na.omit(means.case.prot)
+rownames(means.case.prot) <- rows.name[-1]
+
+save(means.case.prot, means.ctl.prot, means.ctl, means.case, file="CNV_Blood-HD-f.RData")
+
+#PCA
+joined <- cbind(means.ctl, means.case)
+all(colnames(joined) == rownames(bHD_f))
+means_mad <- apply(joined, 1, mad)
+means_pca <- prcomp(joined[order(means_mad, decreasing=T),])
+plot(x=means_pca$rotation[,2], y=means_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=bHD_f$disease, main="Blood-HD_f CNV")
+
+joined.prot <- cbind(means.ctl.prot, means.case.prot)
+means.prot_mad <- apply(joined.prot, 1, mad)
+means.prot_pca <- prcomp(joined.prot[order(means.prot_mad, decreasing=T),])
+plot(x=means.prot_pca$rotation[,2], y=means.prot_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=bHD_f$disease, main="Blood-HD_f-prot CNV")
+
+# ------- CNV all genes -m -------
+library(stringr)
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/Blood/")
+load("HD_blood_m_NoOutliers.RData")
+blood_data_m <- log2(blood_data_m + 1)
+
+gene.genecode.v35 <- read.delim("~/Thesis/Avances/gene.genecode.v35.txt", header=FALSE)
+colnames(gene.genecode.v35) <- c("Chromosome", "Start", "EnsembleID", "Type", "Name")
+rownames(blood_data_m)[which(rownames(blood_data_m) == "CASC4")] <- "GOLM2"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "FGFR1OP")] <- "CEP43"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "FOPNL")] <- "CEP20"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "GRASP")] <- "TAMALIN"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "H1FX-AS1")] <- "H1-10-AS1"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "IMPAD1")] <- "BPNT2"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "KIAA0355")] <- "GARRE1"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "KIAA1211L")] <- "CRACDL"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "KIAA1257")] <- "CFAP92"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "KIAA1324")] <- "ELAPOR1"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "KIAA1324L")] <- "ELAPOR2"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "LRMP")] <- "IRAG2"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "MRVI1")] <- "IRAG1"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "MRVI1-AS1")] <- "IRAG1-AS1"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "SSPO")] <- "SSPOP"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "WDR66")] <- "CFAP251"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "WDYHV1")] <- "NTAQ1"
+
+id <- match(rownames(blood_data_m), gene.genecode.v35$Name)
+hcs <- which(is.na(id))
+all.genes <- blood_data_m[-hcs, ]
+id <- match(rownames(all.genes), gene.genecode.v35$Name)
+genes.info <- gene.genecode.v35[id,]
+genes.info <- genes.info[order(genes.info$Start),]
+genes.info <- genes.info[str_order(genes.info$Chromosome, numeric = TRUE),]
+all.genes <- all.genes[match(genes.info$Name, rownames(all.genes)),]
+genes.info$Chromosome <- as.factor(genes.info$Chromosome)
+
+f <- factor(genes.info$Chromosome, levels = c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", 
+                                              "chr7", "chr8", "chr9", "chr10", "chr11",
+                                              "chr12", "chr13", "chr14", "chr15", "chr16",
+                                              "chr17", "chr18", "chr19", "chr20", "chr21",
+                                              "chr22", "chrX", "chrY", "chrM"))
+
+cnv.ctl <- all.genes[,bHD_m$disease == 1]
+cnv.case <- all.genes[,bHD_m$disease == 2]
+means.case <- matrix(nrow=1000, ncol=ncol(cnv.case))
+colnames(means.case) <- colnames(cnv.case)
+means.ctl <- matrix(nrow=1000, ncol=ncol(cnv.ctl))
+colnames(means.ctl) <- colnames(cnv.ctl)
+
+# fill means for control
+rows.name <- NA
+lnth <- 0
+runs <- 0
+ngene <- 0
+for (chr in levels(f)){
+  j <- 50
+  i <- 1
+  lnth <- lnth + runs
+  runs <- floor(nrow(genes.info[genes.info$Chromosome == chr,]) / 50) - 1
+  if (runs > 0){
+    for (k in 1:runs){
+      for (s in 1:ncol(cnv.ctl)){
+        means.ctl[k+lnth, s] <- mean(cnv.ctl[(i:j)+ngene, s])
+      }
+      rows.name <- c(rows.name, paste(chr, i, j, sep = "_"))
+      j <- j + 50
+      i <- i + 50
+    }
+  }
+  ngene <- ngene + nrow(genes.info[genes.info$Chromosome == chr,])
+}
+means.ctl <- na.omit(means.ctl)
+rownames(means.ctl) <- rows.name[-1]
+
+# fill means for case
+rows.name <- NA
+lnth <- 0
+runs <- 0
+ngene <- 0
+for (chr in levels(f)){
+  j <- 50
+  i <- 1
+  lnth <- lnth + runs
+  runs <- floor(nrow(genes.info[genes.info$Chromosome == chr,]) / 50) - 1
+  if (runs > 0){
+    for (k in 1:runs){
+      for (s in 1:ncol(cnv.case)){
+        means.case[k+lnth, s] <- mean(cnv.case[(i:j)+ngene, s])
+      }
+      rows.name <- c(rows.name, paste(chr, i, j, sep = "_"))
+      j <- j + 50
+      i <- i + 50
+    }
+  }
+  ngene <- ngene + nrow(genes.info[genes.info$Chromosome == chr,])
+}
+means.case <- na.omit(means.case)
+rownames(means.case) <- rows.name[-1]
+
+# ---- CNV protein genes -m ----
+gene.prot <- gene.genecode.v35[gene.genecode.v35$Type == "protein_coding", ]
+id <- match(rownames(blood_data_m), gene.prot$Name)
+hcs <- which(is.na(id)) # 338
+prot.genes <- blood_data_m[-hcs, ]
+id <- match(rownames(prot.genes), gene.prot$Name)
+genes.info <- gene.prot[id,]
+genes.info <- genes.info[order(genes.info$Start),]
+genes.info <- genes.info[str_order(genes.info$Chromosome, numeric = TRUE),]
+prot.genes <- prot.genes[match(genes.info$Name, rownames(prot.genes)),]
+
+cnv.ctl <- prot.genes[,bHD_m$disease == 1]
+cnv.case <- prot.genes[,bHD_m$disease == 2]
+means.case.prot <- matrix(nrow=1000, ncol=dim(cnv.case)[2])
+colnames(means.case.prot) <- colnames(cnv.case)
+means.ctl.prot <- matrix(nrow=1000, ncol=dim(cnv.ctl)[2])
+colnames(means.ctl.prot) <- colnames(cnv.ctl)
+
+# fill means for control
+rows.name <- NA
+lnth <- 0
+runs <- 0
+ngene <- 0
+for (chr in levels(f)){
+  j <- 50
+  i <- 1
+  lnth <- lnth + runs
+  runs <- floor(nrow(genes.info[genes.info$Chromosome == chr,]) / 50) - 1
+  if (runs > 0){
+    for (k in 1:runs){
+      for (s in 1:ncol(cnv.ctl)){
+        means.ctl.prot[k+lnth, s] <- mean(cnv.ctl[(i:j)+ngene, s])
+      }
+      rows.name <- c(rows.name, paste(chr, i, j, sep = "_"))
+      j <- j + 50
+      i <- i + 50
+    }
+  }
+  ngene <- ngene + nrow(genes.info[genes.info$Chromosome == chr,])
+}
+means.ctl.prot <- na.omit(means.ctl.prot)
+rownames(means.ctl.prot) <- rows.name[-1]
+
+# fill means for case
+rows.name <- NA
+lnth <- 0
+runs <- 0
+ngene <- 0
+for (chr in levels(f)){
+  j <- 50
+  i <- 1
+  lnth <- lnth + runs
+  runs <- floor(nrow(genes.info[genes.info$Chromosome == chr,]) / 50) - 1
+  if (runs > 0){
+    for (k in 1:runs){
+      for (s in 1:ncol(cnv.case)){
+        means.case.prot[k+lnth, s] <- mean(cnv.case[(i:j)+ngene, s])
+      }
+      rows.name <- c(rows.name, paste(chr, i, j, sep = "_"))
+      j <- j + 50
+      i <- i + 50
+    }
+  }
+  ngene <- ngene + nrow(genes.info[genes.info$Chromosome == chr,])
+}
+means.case.prot <- na.omit(means.case.prot)
+rownames(means.case.prot) <- rows.name[-1]
+
+save(means.case.prot, means.ctl.prot, means.ctl, means.case, file="CNV_Blood-HD-m.RData")
+
+#PCA
+joined <- cbind(means.ctl, means.case)
+all(colnames(joined) == rownames(bHD_m))
+means_mad <- apply(joined, 1, mad)
+means_pca <- prcomp(joined[order(means_mad, decreasing=T),])
+plot(x=means_pca$rotation[,2], y=means_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=bHD_m$disease, main="Blood-HD_m CNV")
+
+joined.prot <- cbind(means.ctl.prot, means.case.prot)
+means.prot_mad <- apply(joined.prot, 1, mad)
+means.prot_pca <- prcomp(joined.prot[order(means.prot_mad, decreasing=T),])
+plot(x=means.prot_pca$rotation[,2], y=means.prot_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=bHD_m$disease, main="Blood-HD_m-prot CNV")
+
+# ------- limma for regions: duplications or deletions -f ------
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/Blood/")
+load("CNV_Blood-HD-f.RData")
+load("HD_blood_f_NoOutliers.RData")
+
+# All genes
+library(limma)
+cnv_mat <- cbind(means.ctl, means.case)
+all(colnames(cnv_mat) == rownames(bHD_f))
+limma_cnv <- limma4DS_fdr(cnv_mat, ifelse(bHD_f$disease == 2, 1, 0), classes_names=c("HD","Control"))
+limma_cnv_up <- rownames(limma_cnv)[which(limma_cnv$logFC > 0.15 & limma_cnv$q.value <= 0.05)]
+limma_cnv_dw <- rownames(limma_cnv)[which(limma_cnv$logFC < -0.15 & limma_cnv$q.value <= 0.05)]
+length(limma_cnv_up) # 8 with logFC=0.15
+length(limma_cnv_dw) # 12 with logFC=-0.15
+
+# Prot genes
+cnv_mat_prot <- cbind(means.ctl.prot, means.case.prot)
+all(colnames(cnv_mat_prot) == rownames(bHD_f))
+limma_cnv_prot <- limma4DS_fdr(cnv_mat_prot, ifelse(bHD_f$disease == 2, 1, 0), classes_names=c("HD","Control"))
+limma_cnv_up <- rownames(limma_cnv_prot)[which(limma_cnv_prot$logFC > 0.15 & limma_cnv_prot$q.value <= 0.05)]
+limma_cnv_dw <- rownames(limma_cnv_prot)[which(limma_cnv_prot$logFC < -0.15 & limma_cnv_prot$q.value <= 0.05)]
+length(limma_cnv_up) # 6 with logFC=0.15
+length(limma_cnv_dw) # 12 with logFC=-0.15
+
+save(limma_cnv, limma_cnv_prot, cnv_mat, cnv_mat_prot, file="DE_CNV_HD-Blood-f.RData")
+
+# -------- CNV Heatmap-f -------
+library(gplots)
+library(pheatmap)
+library(stringr)
+library(randomcoloR)
+library(dplyr)
+load("clinical-exp-data_subtypes_HD-Blood-f.RData")
+load("DE_CNV_HD-Blood-f.RData")
+load("HD_blood_f_NoOutliers.RData")
+
+# All genes
+limma_cnv <- limma_cnv[str_order(rownames(limma_cnv), numeric = TRUE),]
+cnv_mat <- cnv_mat[str_order(rownames(cnv_mat), numeric = TRUE),]
+CNV.topgenes <- rownames(limma_cnv)
+i <- which(rownames(cnv_mat) %in% CNV.topgenes)
+
+labs <- NA
+for (x in 1:length(CNV.topgenes)){
+  labs <- c(labs, word(CNV.topgenes[x], 1, sep="_"))
+}
+labs <- labs[-1]
+flabs <- as.factor(labs)
+set.seed(123)
+levels(flabs) <- distinctColorPalette(nlevels(flabs))
+flabs <- as.character(flabs)
+
+flabs.break <- data.frame(labels=labs)
+flabs.break <- flabs.break %>% group_by(labels) %>% summarise(no_rows = length(labels))
+flabs.break <- as.data.frame(flabs.break[str_order(flabs.break$labels, numeric = TRUE),])
+breaks <- flabs.break$no_rows[1]
+a <- flabs.break$no_rows[1]
+for (x in 2:(nrow(flabs.break))){
+  a <- a + flabs.break$no_rows[x]
+  breaks <- c(breaks, a)
+}
+
+clinical <- clinical[order(clinical$sub_class, decreasing = TRUE),]
+cnv_mat <- cnv_mat[, match(rownames(clinical), colnames(cnv_mat))]
+rowbr <- data.frame(subtype=clinical$sub_class)
+rowbr <- rowbr %>% group_by(subtype) %>% summarise(no_rows = length(subtype))
+rowbr <- as.data.frame(rowbr[order(rowbr$subtype, decreasing = TRUE),])
+row.breaks <- rowbr$no_rows[1]
+a <- rowbr$no_rows[1]
+for (x in 2:(nrow(rowbr))){
+  a <- a + rowbr$no_rows[x]
+  row.breaks <- c(row.breaks, a)
+}
+
+t_mat <- t(cnv_mat)
+mycol <- colorpanel(15,"blue","white","red")
+myBreaks <- seq(-2, 2, length.out=16)
+heat <- scale(t_mat) #scaling
+png("CNV/CNV_HD-Blood-f_all.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(heat[,i], scale="none",
+          labRow=FALSE, labCol=FALSE,
+          col=mycol, trace="none", density.info="none",
+          RowSideColors=c("orange4", "orange3", "orange2", "cornflowerblue")[clinical$sub_class],
+          ColSideColors = flabs, colsep = breaks, sepcolor = 1, 
+          rowsep = row.breaks, sepwidth = c(0.5, 0.25),
+          Colv = NULL, Rowv = FALSE, dendrogram="none", keysize=0.6,
+          breaks = myBreaks)
+legend("topright",      
+       legend = unique(labs),
+       col = unique(flabs),
+       cex= 1.5,
+       horiz = TRUE,
+       pch = 16
+)
+legend("left",      
+       legend = c("Control", "HD-Subtype 3", "HD-Subtype 2", "HD-Subtype 1"),
+       col = c("cornflowerblue","orange2", "orange3", "orange4"),          
+       cex= 2,
+       pch = 16
+)
+dev.off()
+
+# Prot genes
+limma_cnv_prot <- limma_cnv_prot[str_order(rownames(limma_cnv_prot), numeric = TRUE),]
+cnv_mat_prot <- cnv_mat_prot[str_order(rownames(cnv_mat_prot), numeric = TRUE),]
+CNV.topgenes_prot <- rownames(limma_cnv_prot)
+i2 <- which(rownames(cnv_mat_prot) %in% CNV.topgenes_prot)
+
+labs2 <- NA
+for (x in 1:length(CNV.topgenes_prot)){
+  labs2 <- c(labs2, word(CNV.topgenes_prot[x], 1, sep="_"))
+}
+labs2 <- labs2[-1]
+flabs2 <- as.factor(labs2)
+set.seed(123)
+levels(flabs2) <- distinctColorPalette(nlevels(flabs2))
+flabs2 <- as.character(flabs2)
+
+flabs.break2 <- data.frame(labels=labs2)
+flabs.break2 <- flabs.break2 %>% group_by(labels) %>% summarise(no_rows = length(labels))
+flabs.break2 <- as.data.frame(flabs.break2[str_order(flabs.break2$labels, numeric = TRUE),])
+breaks2 <- flabs.break2$no_rows[1]
+a <- flabs.break2$no_rows[1]
+for (x in 2:(nrow(flabs.break2))){
+  a <- a + flabs.break2$no_rows[x]
+  breaks2 <- c(breaks2, a)
+}
+
+t_mat2 <- t(cnv_mat_prot)
+mycol <- colorpanel(15,"blue","white","red")
+png("CNV_HD-Blood-f_prot.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(t_mat2[,i2], scale="column",
+          labRow=FALSE, labCol=FALSE,
+          col=mycol, trace="none", density.info="none",
+          RowSideColors=c("orange4", "orange3", "orange2", "cornflowerblue")[clinical$sub_class],
+          ColSideColors = flabs2, colsep = breaks2, sepcolor = 1, 
+          rowsep = row.breaks, sepwidth = c(0.5, 0.25),
+          Colv = NULL, Rowv = FALSE, dendrogram="none", keysize=0.6)
+legend("topright",      
+       legend = unique(labs2),
+       col = unique(flabs2),
+       cex= 1.5,
+       horiz = TRUE,
+       pch = 16
+)
+legend("left",      
+       legend = c("Control", "HD-Subtype 3", "HD-Subtype 2", "HD-Subtype 1"),
+       col = c("cornflowerblue","orange2", "orange3", "orange4"),          
+       cex= 2,
+       pch = 16
+)
+dev.off()
+
+# DE Prot genes
+limma_cnv_prot <- limma_cnv_prot[which((limma_cnv_prot$logFC > 0 | limma_cnv_prot$logFC < 0) & limma_cnv_prot$q.value <= 0.05),]
+limma_cnv_prot <- limma_cnv_prot[str_order(rownames(limma_cnv_prot), numeric = TRUE),]
+cnv_mat_prot <- cnv_mat_prot[str_order(rownames(cnv_mat_prot), numeric = TRUE),]
+CNV.topgenes_prot <- rownames(limma_cnv_prot)
+i2 <- which(rownames(cnv_mat_prot) %in% CNV.topgenes_prot)
+
+labs2 <- NA
+for (x in 1:length(CNV.topgenes_prot)){
+  labs2 <- c(labs2, word(CNV.topgenes_prot[x], 1, sep="_"))
+}
+labs2 <- labs2[-1]
+flabs2 <- as.factor(labs2)
+set.seed(123)
+levels(flabs2) <- distinctColorPalette(nlevels(flabs2))
+flabs2 <- as.character(flabs2)
+
+flabs.break2 <- data.frame(labels=labs2)
+flabs.break2 <- flabs.break2 %>% group_by(labels) %>% summarise(no_rows = length(labels))
+flabs.break2 <- as.data.frame(flabs.break2[str_order(flabs.break2$labels, numeric = TRUE),])
+breaks2 <- flabs.break2$no_rows[1]
+a <- flabs.break2$no_rows[1]
+for (x in 2:(nrow(flabs.break2))){
+  a <- a + flabs.break2$no_rows[x]
+  breaks2 <- c(breaks2, a)
+}
+
+t_mat2 <- t(cnv_mat_prot)
+mycol <- colorpanel(15,"blue","white","red")
+png("CNV-DE_HD-Blood-f_prot.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(t_mat2[,i2], scale="column",
+          labRow=FALSE, labCol=FALSE,
+          col=mycol, trace="none", density.info="none",
+          RowSideColors=c("orange4", "orange3", "orange2", "cornflowerblue")[clinical$sub_class],
+          ColSideColors = flabs2, colsep = breaks2, sepcolor = 1, 
+          rowsep = row.breaks, sepwidth = c(0.25, 0.25),
+          Colv = NULL, Rowv = FALSE, dendrogram="none", keysize=0.6)
+legend("topright",      
+       legend = unique(labs2),
+       col = unique(flabs2),
+       cex= 1.5,
+       horiz = TRUE,
+       pch = 16
+)
+legend("left",      
+       legend = c("Control", "HD-Subtype 3", "HD-Subtype 2", "HD-Subtype 1"),
+       col = c("cornflowerblue","orange2", "orange3", "orange4"),          
+       cex= 2,
+       pch = 16
+)
+dev.off()
+
+# Heatmap with mean
+all(colnames(cnv_mat_prot) == rownames(bHD_f))
+ctl <- cnv_mat_prot[,which(bHD_f$disease == 1)]
+case <- cnv_mat_prot[,which(bHD_f$disease == 2)]
+mean_cnv_mat_prot <- cbind(rowMeans(ctl), case)
+
+row.breaks <- row.breaks - rowbr[1,2] + 1
+rowcol <- factor(c(5, rep(3, rowbr[2,2]), rep(2, rowbr[3,2]), rep(1, rowbr[4,2])))
+
+t_mat2 <- t(mean_cnv_mat_prot)
+mycol <- colorpanel(15,"blue","white","red")
+png("CNV-DE-mean_HD-Blood-f_prot.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(t_mat2[,i2], scale="column",
+          labRow=FALSE, labCol=FALSE,
+          col=mycol, trace="none", density.info="none",
+          RowSideColors=c("orange4", "orange3", "orange2", "cornflowerblue")[rowcol],
+          ColSideColors = flabs2, colsep = breaks2, sepcolor = 1, 
+          rowsep = row.breaks, sepwidth = c(0.25, 0.25),
+          Colv = NULL, Rowv = FALSE, dendrogram="none", keysize=0.6)
+legend("topright",      
+       legend = unique(labs2),
+       col = unique(flabs2),
+       cex= 1.5,
+       horiz = TRUE,
+       pch = 16
+)
+legend("left",      
+       legend = c("Control", "HD-Subtype 3", "HD-Subtype 2", "HD-Subtype 1"),
+       col = c("cornflowerblue","orange2", "orange3", "orange4"),          
+       cex= 2,
+       pch = 16
+)
+dev.off()
+
+# ------- limma for regions: duplications or deletions -m ------
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/Blood/")
+load("CNV_Blood-HD-m.RData")
+load("HD_blood_m_NoOutliers.RData")
+
+# All genes
+library(limma)
+cnv_mat <- cbind(means.ctl, means.case)
+all(colnames(cnv_mat) == rownames(bHD_m))
+limma_cnv <- limma4DS_fdr(cnv_mat, ifelse(bHD_m$disease == 2, 1, 0), classes_names=c("HD","Control"))
+limma_cnv_up <- rownames(limma_cnv)[which(limma_cnv$logFC > 0.15 & limma_cnv$q.value <= 0.05)]
+limma_cnv_dw <- rownames(limma_cnv)[which(limma_cnv$logFC < -0.15 & limma_cnv$q.value <= 0.05)]
+length(limma_cnv_up) # 64 with logFC=0.15
+length(limma_cnv_dw) # 53 with logFC=-0.15
+
+# Prot genes
+cnv_mat_prot <- cbind(means.ctl.prot, means.case.prot)
+all(colnames(cnv_mat_prot) == rownames(bHD_m))
+limma_cnv_prot <- limma4DS_fdr(cnv_mat_prot, ifelse(bHD_m$disease == 2, 1, 0), classes_names=c("HD","Control"))
+limma_cnv_up <- rownames(limma_cnv_prot)[which(limma_cnv_prot$logFC > 0.15 & limma_cnv_prot$q.value <= 0.05)]
+limma_cnv_dw <- rownames(limma_cnv_prot)[which(limma_cnv_prot$logFC < -0.15 & limma_cnv_prot$q.value <= 0.05)]
+length(limma_cnv_up) # 59 with logFC=0.15
+length(limma_cnv_dw) # 50 with logFC=-0.15
+
+save(limma_cnv, limma_cnv_prot, cnv_mat, cnv_mat_prot, file="DE_CNV_HD-Blood-m.RData")
+
+# -------- CNV Heatmap-m -------
+library(gplots)
+library(pheatmap)
+library(stringr)
+library(randomcoloR)
+library(dplyr)
+load("clinical-exp-data_subtypes_HD-Blood-m.RData")
+load("DE_CNV_HD-Blood-m.RData")
+load("HD_blood_m_NoOutliers.RData")
+
+# All genes
+limma_cnv <- limma_cnv[str_order(rownames(limma_cnv), numeric = TRUE),]
+cnv_mat <- cnv_mat[str_order(rownames(cnv_mat), numeric = TRUE),]
+CNV.topgenes <- rownames(limma_cnv)
+i <- which(rownames(cnv_mat) %in% CNV.topgenes)
+
+labs <- NA
+for (x in 1:length(CNV.topgenes)){
+  labs <- c(labs, word(CNV.topgenes[x], 1, sep="_"))
+}
+labs <- labs[-1]
+flabs <- as.factor(labs)
+set.seed(123)
+levels(flabs) <- distinctColorPalette(nlevels(flabs))
+flabs <- as.character(flabs)
+
+flabs.break <- data.frame(labels=labs)
+flabs.break <- flabs.break %>% group_by(labels) %>% summarise(no_rows = length(labels))
+flabs.break <- as.data.frame(flabs.break[str_order(flabs.break$labels, numeric = TRUE),])
+breaks <- flabs.break$no_rows[1]
+a <- flabs.break$no_rows[1]
+for (x in 2:(nrow(flabs.break))){
+  a <- a + flabs.break$no_rows[x]
+  breaks <- c(breaks, a)
+}
+
+clinical <- clinical[order(clinical$sub_class, decreasing = TRUE),]
+cnv_mat <- cnv_mat[, match(rownames(clinical), colnames(cnv_mat))]
+rowbr <- data.frame(subtype=clinical$sub_class)
+rowbr <- rowbr %>% group_by(subtype) %>% summarise(no_rows = length(subtype))
+rowbr <- as.data.frame(rowbr[order(rowbr$subtype, decreasing = TRUE),])
+row.breaks <- rowbr$no_rows[1]
+a <- rowbr$no_rows[1]
+for (x in 2:(nrow(rowbr))){
+  a <- a + rowbr$no_rows[x]
+  row.breaks <- c(row.breaks, a)
+}
+
+t_mat <- t(cnv_mat)
+mycol <- colorpanel(15,"blue","white","red")
+myBreaks <- seq(-2, 2, length.out=16)
+heat <- scale(t_mat) #scaling
+png("CNV/CNV_HD-Blood-m_all.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(heat[,i], scale="none",
+          labRow=FALSE, labCol=FALSE,
+          col=mycol, trace="none", density.info="none",
+          RowSideColors=c("orange4", "orange3", "cornflowerblue")[clinical$sub_class],
+          ColSideColors = flabs, colsep = breaks, sepcolor = 1, 
+          rowsep = row.breaks, sepwidth = c(0.5, 0.25),
+          Colv = NULL, Rowv = FALSE, dendrogram="none", keysize=0.6,
+          breaks = myBreaks)
+legend("topright",      
+       legend = unique(labs),
+       col = unique(flabs),
+       cex= 1.5,
+       horiz = TRUE,
+       pch = 16
+)
+legend("left",      
+       legend = c("Control", "HD-Subtype 2", "HD-Subtype 1"),
+       col = c("cornflowerblue", "orange3", "orange4"),          
+       cex= 2,
+       pch = 16
+)
+dev.off()
+
+# Prot genes
+limma_cnv_prot <- limma_cnv_prot[str_order(rownames(limma_cnv_prot), numeric = TRUE),]
+cnv_mat_prot <- cnv_mat_prot[str_order(rownames(cnv_mat_prot), numeric = TRUE),]
+CNV.topgenes_prot <- rownames(limma_cnv_prot)
+i2 <- which(rownames(cnv_mat_prot) %in% CNV.topgenes_prot)
+
+labs2 <- NA
+for (x in 1:length(CNV.topgenes_prot)){
+  labs2 <- c(labs2, word(CNV.topgenes_prot[x], 1, sep="_"))
+}
+labs2 <- labs2[-1]
+flabs2 <- as.factor(labs2)
+set.seed(123)
+levels(flabs2) <- distinctColorPalette(nlevels(flabs2))
+flabs2 <- as.character(flabs2)
+
+flabs.break2 <- data.frame(labels=labs2)
+flabs.break2 <- flabs.break2 %>% group_by(labels) %>% summarise(no_rows = length(labels))
+flabs.break2 <- as.data.frame(flabs.break2[str_order(flabs.break2$labels, numeric = TRUE),])
+breaks2 <- flabs.break2$no_rows[1]
+a <- flabs.break2$no_rows[1]
+for (x in 2:(nrow(flabs.break2))){
+  a <- a + flabs.break2$no_rows[x]
+  breaks2 <- c(breaks2, a)
+}
+
+t_mat2 <- t(cnv_mat_prot)
+mycol <- colorpanel(15,"blue","white","red")
+png("CNV_HD-Blood-m_prot.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(t_mat2[,i2], scale="column",
+          labRow=FALSE, labCol=FALSE,
+          col=mycol, trace="none", density.info="none",
+          RowSideColors=c("orange4", "orange3", "cornflowerblue")[clinical$sub_class],
+          ColSideColors = flabs2, colsep = breaks2, sepcolor = 1, 
+          rowsep = row.breaks, sepwidth = c(0.5, 0.25),
+          Colv = NULL, Rowv = FALSE, dendrogram="none", keysize=0.6)
+legend("topright",      
+       legend = unique(labs2),
+       col = unique(flabs2),
+       cex= 1.5,
+       horiz = TRUE,
+       pch = 16
+)
+legend("left",      
+       legend = c("Control", "HD-Subtype 2", "HD-Subtype 1"),
+       col = c("cornflowerblue", "orange3", "orange4"),          
+       cex= 2,
+       pch = 16
+)
+dev.off()
+
+# DE Prot genes
+limma_cnv_prot <- limma_cnv_prot[which((limma_cnv_prot$logFC > 0 | limma_cnv_prot$logFC < 0) & limma_cnv_prot$q.value <= 0.05),]
+limma_cnv_prot <- limma_cnv_prot[str_order(rownames(limma_cnv_prot), numeric = TRUE),]
+cnv_mat_prot <- cnv_mat_prot[str_order(rownames(cnv_mat_prot), numeric = TRUE),]
+CNV.topgenes_prot <- rownames(limma_cnv_prot)
+i2 <- which(rownames(cnv_mat_prot) %in% CNV.topgenes_prot)
+
+labs2 <- NA
+for (x in 1:length(CNV.topgenes_prot)){
+  labs2 <- c(labs2, word(CNV.topgenes_prot[x], 1, sep="_"))
+}
+labs2 <- labs2[-1]
+flabs2 <- as.factor(labs2)
+set.seed(123)
+levels(flabs2) <- distinctColorPalette(nlevels(flabs2))
+flabs2 <- as.character(flabs2)
+
+flabs.break2 <- data.frame(labels=labs2)
+flabs.break2 <- flabs.break2 %>% group_by(labels) %>% summarise(no_rows = length(labels))
+flabs.break2 <- as.data.frame(flabs.break2[str_order(flabs.break2$labels, numeric = TRUE),])
+breaks2 <- flabs.break2$no_rows[1]
+a <- flabs.break2$no_rows[1]
+for (x in 2:(nrow(flabs.break2))){
+  a <- a + flabs.break2$no_rows[x]
+  breaks2 <- c(breaks2, a)
+}
+
+t_mat2 <- t(cnv_mat_prot)
+mycol <- colorpanel(15,"blue","white","red")
+png("CNV-DE_HD-Blood-m_prot.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(t_mat2[,i2], scale="column",
+          labRow=FALSE, labCol=FALSE,
+          col=mycol, trace="none", density.info="none",
+          RowSideColors=c("orange4", "orange3", "cornflowerblue")[clinical$sub_class],
+          ColSideColors = flabs2, colsep = breaks2, sepcolor = 1, 
+          rowsep = row.breaks, sepwidth = c(0.25, 0.25),
+          Colv = NULL, Rowv = FALSE, dendrogram="none", keysize=0.6)
+legend("topright",      
+       legend = unique(labs2),
+       col = unique(flabs2),
+       cex= 1.5,
+       horiz = TRUE,
+       pch = 16
+)
+legend("left",      
+       legend = c("Control", "HD-Subtype 2", "HD-Subtype 1"),
+       col = c("cornflowerblue", "orange3", "orange4"),          
+       cex= 2,
+       pch = 16
+)
+dev.off()
+
+# Heatmap with mean
+all(colnames(cnv_mat_prot) == rownames(bHD_m))
+ctl <- cnv_mat_prot[,which(bHD_m$disease == 1)]
+case <- cnv_mat_prot[,which(bHD_m$disease == 2)]
+mean_cnv_mat_prot <- cbind(rowMeans(ctl), case)
+
+row.breaks <- row.breaks - rowbr[1,2] + 1
+rowcol <- factor(c(5, rep(3, rowbr[2,2]), rep(2, rowbr[3,2])))
+
+t_mat2 <- t(mean_cnv_mat_prot)
+mycol <- colorpanel(15,"blue","white","red")
+png("CNV-DE-mean_HD-Blood-m_prot.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(t_mat2[,i2], scale="column",
+          labRow=FALSE, labCol=FALSE,
+          col=mycol, trace="none", density.info="none",
+          RowSideColors=c("orange4", "orange3", "cornflowerblue")[rowcol],
+          ColSideColors = flabs2, colsep = breaks2, sepcolor = 1, 
+          rowsep = row.breaks, sepwidth = c(0.25, 0.25),
+          Colv = NULL, Rowv = FALSE, dendrogram="none", keysize=0.6)
+legend("topright",      
+       legend = unique(labs2),
+       col = unique(flabs2),
+       cex= 1.5,
+       horiz = TRUE,
+       pch = 16
+)
+legend("left",      
+       legend = c("Control", "HD-Subtype 2", "HD-Subtype 1"),
+       col = c("cornflowerblue", "orange3", "orange4"),          
+       cex= 2,
+       pch = 16
+)
+dev.off()
+
+# ------- CNVplot -f ------
+library(stringr)
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/Blood/")
+load("DE_CNV_HD-Blood-f.RData")
+load("HD_blood_f_NoOutliers.RData")
+gene.cnv.v35 <- read.delim("~/Thesis/Avances/gene.cnv.v35.txt", header=FALSE)
+colnames(gene.cnv.v35) <- c('Chromosome', 'Start', 'End', 'Ensembl', 'Type', 'Name')
+limma_cnv <- limma_cnv[str_order(rownames(limma_cnv), numeric = TRUE),]
+limma_cnv$logFC[which(limma_cnv$q.value > 0.05)] <- 0 
+
+gene.genecode.v35 <- read.delim("~/Thesis/Avances/gene.genecode.v35.txt", header=FALSE)
+colnames(gene.genecode.v35) <- c("Chromosome", "Start", "EnsembleID", "Type", "Name")
+rownames(blood_data_f)[which(rownames(blood_data_f) == "CASC4")] <- "GOLM2"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "FGFR1OP")] <- "CEP43"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "FOPNL")] <- "CEP20"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "GRASP")] <- "TAMALIN"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "H1FX-AS1")] <- "H1-10-AS1"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "IMPAD1")] <- "BPNT2"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "KIAA0355")] <- "GARRE1"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "KIAA1211L")] <- "CRACDL"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "KIAA1257")] <- "CFAP92"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "KIAA1324")] <- "ELAPOR1"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "KIAA1324L")] <- "ELAPOR2"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "LRMP")] <- "IRAG2"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "MRVI1")] <- "IRAG1"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "MRVI1-AS1")] <- "IRAG1-AS1"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "SSPO")] <- "SSPOP"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "WDR66")] <- "CFAP251"
+rownames(blood_data_f)[which(rownames(blood_data_f) == "WDYHV1")] <- "NTAQ1"
+
+id <- match(rownames(blood_data_f), gene.genecode.v35$Name)
+hcs <- which(is.na(id))
+all.genes <- blood_data_f[-hcs, ]
+id <- match(rownames(all.genes), gene.genecode.v35$Name)
+genes.info <- gene.genecode.v35[id,]
+genes.info <- genes.info[order(genes.info$Start),]
+genes.info <- genes.info[str_order(genes.info$Chromosome, numeric = TRUE),]
+genes.info$Chromosome <- as.factor(genes.info$Chromosome)
+cnv.info <- gene.cnv.v35[match(genes.info$Name, gene.cnv.v35$Name),]
+cnv.info$Chromosome <- as.factor(cnv.info$Chromosome)
+genes.info$Chromosome <- as.factor(genes.info$Chromosome)
+
+f <- factor(genes.info$Chromosome, levels = c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", 
+                                              "chr7", "chr8", "chr9", "chr10", "chr11",
+                                              "chr12", "chr13", "chr14", "chr15", "chr16",
+                                              "chr17", "chr18", "chr19", "chr20", "chr21",
+                                              "chr22", "chrX", "chrY", "chrM"))
+
+lnth <- 0
+runs <- 0
+ngene <- 0
+for (chr in levels(f)){
+  j <- 50
+  i <- 1
+  lnth <- lnth + runs
+  runs <- floor(nrow(cnv.info[cnv.info$Chromosome == chr,]) / 50) - 1
+  if (runs > 0){
+    for (k in 1:runs){
+      limma_cnv$Start[k+lnth] <- cnv.info$Start[i+ngene]
+      limma_cnv$End[k+lnth] <- cnv.info$End[j+ngene]
+      j <- j + 50
+      i <- i + 50
+    }
+  }
+  ngene <- ngene + nrow(cnv.info[cnv.info$Chromosome == chr,])
+}
+
+labs <- NA
+for (x in 1:nrow(limma_cnv)){
+  labs <- c(labs, word(rownames(limma_cnv)[x], 1, sep="_"))
+}
+labs <- labs[-1]
+
+#sacar la media para CN por segmento de 10 windows
+in.row <- 0
+cn <- NA
+for (chr in levels(f)){
+  i <- 1
+  j <- 10
+  n.windows <- length(labs[which(labs == chr)])
+  if (n.windows > 0){
+    n.means <- floor(n.windows / 10)
+    res.mean <- n.windows %% 10
+    if (res.mean == 0){
+      for (runs in 1:n.means){
+        cn <- c(cn, rep(mean(limma_cnv$logFC[(i:j)+in.row]), 10))
+        i <- i + 10
+        j <- j + 10
+      }
+    }
+    else{
+      for (runs in 1:(n.means+1)){
+        if (runs == n.means+1){
+          cn <- c(cn, rep(mean(limma_cnv$logFC[(i:(i+res.mean-1))+in.row]), res.mean))
+        }
+        else{
+          cn <- c(cn, rep(mean(limma_cnv$logFC[(i:j)+in.row]), 10))
+          i <- i + 10
+          j <- j + 10
+        }
+      }
+    }
+    in.row <- in.row + n.windows
+  }
+}
+
+limma_cnv$cn <- cn[-1]
+limma_cnv$Chromosome <- labs
+limma_cnv <- limma_cnv[, c(-1,-2,-4,-5)]
+limma_cnv <- limma_cnv[, c(5,2,3,4,1)]
+colnames(limma_cnv) <- c("Chromosome", "Start", "End", "cn", "lrr")
+#rev <- which(!(limma_cnv$End >= limma_cnv$Start-1))
+#limma_cnv <- limma_cnv[c(-rev),]
+
+s1 <- loadCopyNumberCalls(limma_cnv)
+png("cnvplot_HD-Blood-f_all.png", width = 30, height = 15, units = 'in', res = 300)
+kp <- plotKaryotype("hg19", plot.type = 4, labels.plotter = NULL, main="HD-Blood-f, 2Mb resolution", cex=2)
+kpAddChromosomeNames(kp, srt=45, cex=2.2)
+plotLRR(kp, s1, labels = NA, ymin = min(limma_cnv$lrr), ymax=max(limma_cnv$lrr), points.col = "#AAAAAAAA", line.at.0 = FALSE, points.cex = 3, add.axis = FALSE)
+plotCopyNumberCallsAsLines(kp, cn.calls = s1, lwd=2, add.axis=FALSE, labels = NA, ymin = min(limma_cnv$lrr), ymax = max(limma_cnv$lrr))
+kpAddChromosomeSeparators(kp, lwd=2, col = "#666666")
+kpAxis(kp, ymin = min(limma_cnv$lrr), ymax=max(limma_cnv$lrr), tick.pos = c(-0.5, -0.25, 0, 0.25, 0.5), cex=2.2)
+kpAddLabels(kp, labels = "CN", cex=3, srt=90, pos=3, label.margin = 0.025)
+dev.off()
+
+# ------- CNVplot -m ------
+library(stringr)
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/Blood/")
+load("DE_CNV_HD-Blood-m.RData")
+load("HD_blood_m_NoOutliers.RData")
+gene.cnv.v35 <- read.delim("~/Thesis/Avances/gene.cnv.v35.txt", header=FALSE)
+colnames(gene.cnv.v35) <- c('Chromosome', 'Start', 'End', 'Ensembl', 'Type', 'Name')
+limma_cnv <- limma_cnv[str_order(rownames(limma_cnv), numeric = TRUE),]
+limma_cnv$logFC[which(limma_cnv$q.value > 0.05)] <- 0 
+
+gene.genecode.v35 <- read.delim("~/Thesis/Avances/gene.genecode.v35.txt", header=FALSE)
+colnames(gene.genecode.v35) <- c("Chromosome", "Start", "EnsembleID", "Type", "Name")
+rownames(blood_data_m)[which(rownames(blood_data_m) == "CASC4")] <- "GOLM2"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "FGFR1OP")] <- "CEP43"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "FOPNL")] <- "CEP20"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "GRASP")] <- "TAMALIN"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "H1FX-AS1")] <- "H1-10-AS1"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "IMPAD1")] <- "BPNT2"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "KIAA0355")] <- "GARRE1"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "KIAA1211L")] <- "CRACDL"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "KIAA1257")] <- "CFAP92"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "KIAA1324")] <- "ELAPOR1"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "KIAA1324L")] <- "ELAPOR2"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "LRMP")] <- "IRAG2"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "MRVI1")] <- "IRAG1"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "MRVI1-AS1")] <- "IRAG1-AS1"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "SSPO")] <- "SSPOP"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "WDR66")] <- "CFAP251"
+rownames(blood_data_m)[which(rownames(blood_data_m) == "WDYHV1")] <- "NTAQ1"
+
+id <- match(rownames(blood_data_m), gene.genecode.v35$Name)
+hcs <- which(is.na(id))
+all.genes <- blood_data_m[-hcs, ]
+id <- match(rownames(all.genes), gene.genecode.v35$Name)
+genes.info <- gene.genecode.v35[id,]
+genes.info <- genes.info[order(genes.info$Start),]
+genes.info <- genes.info[str_order(genes.info$Chromosome, numeric = TRUE),]
+genes.info$Chromosome <- as.factor(genes.info$Chromosome)
+cnv.info <- gene.cnv.v35[match(genes.info$Name, gene.cnv.v35$Name),]
+cnv.info$Chromosome <- as.factor(cnv.info$Chromosome)
+
+
+f <- factor(genes.info$Chromosome, levels = c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", 
+                                              "chr7", "chr8", "chr9", "chr10", "chr11",
+                                              "chr12", "chr13", "chr14", "chr15", "chr16",
+                                              "chr17", "chr18", "chr19", "chr20", "chr21",
+                                              "chr22", "chrX", "chrY", "chrM"))
+
+lnth <- 0
+runs <- 0
+ngene <- 0
+for (chr in levels(f)){
+  j <- 50
+  i <- 1
+  lnth <- lnth + runs
+  runs <- floor(nrow(cnv.info[cnv.info$Chromosome == chr,]) / 50) - 1
+  if (runs > 0){
+    for (k in 1:runs){
+      limma_cnv$Start[k+lnth] <- cnv.info$Start[i+ngene]
+      limma_cnv$End[k+lnth] <- cnv.info$End[j+ngene]
+      j <- j + 50
+      i <- i + 50
+    }
+  }
+  ngene <- ngene + nrow(cnv.info[cnv.info$Chromosome == chr,])
+}
+
+labs <- NA
+for (x in 1:nrow(limma_cnv)){
+  labs <- c(labs, word(rownames(limma_cnv)[x], 1, sep="_"))
+}
+labs <- labs[-1]
+
+#sacar la media para CN por segmento de 10 windows
+in.row <- 0
+cn <- NA
+for (chr in levels(f)){
+  i <- 1
+  j <- 10
+  n.windows <- length(labs[which(labs == chr)])
+  if (n.windows > 0){
+    n.means <- floor(n.windows / 10)
+    res.mean <- n.windows %% 10
+    if (res.mean == 0){
+      for (runs in 1:n.means){
+        cn <- c(cn, rep(mean(limma_cnv$logFC[(i:j)+in.row]), 10))
+        i <- i + 10
+        j <- j + 10
+      }
+    }
+    else{
+      for (runs in 1:(n.means+1)){
+        if (runs == n.means+1){
+          cn <- c(cn, rep(mean(limma_cnv$logFC[(i:(i+res.mean-1))+in.row]), res.mean))
+        }
+        else{
+          cn <- c(cn, rep(mean(limma_cnv$logFC[(i:j)+in.row]), 10))
+          i <- i + 10
+          j <- j + 10
+        }
+      }
+    }
+    in.row <- in.row + n.windows
+  }
+}
+
+limma_cnv$cn <- cn[-1]
+limma_cnv$Chromosome <- labs
+limma_cnv <- limma_cnv[, c(-1,-2,-4,-5)]
+limma_cnv <- limma_cnv[, c(5,2,3,4,1)]
+colnames(limma_cnv) <- c("Chromosome", "Start", "End", "cn", "lrr")
+#rev <- which(!(limma_cnv$End >= limma_cnv$Start-1))
+#limma_cnv <- limma_cnv[c(-rev),]
+
+s1 <- loadCopyNumberCalls(limma_cnv)
+png("cnvplot_HD-Blood-m_all.png", width = 30, height = 15, units = 'in', res = 300)
+kp <- plotKaryotype("hg19", plot.type = 4, labels.plotter = NULL, main="HD-Blood-m, 2Mb resolution", cex=2)
+kpAddChromosomeNames(kp, srt=45, cex=2.2)
+plotLRR(kp, s1, labels = NA, ymin = min(limma_cnv$lrr), ymax=max(limma_cnv$lrr), points.col = "#AAAAAAAA", line.at.0 = FALSE, points.cex = 3, add.axis = FALSE)
+plotCopyNumberCallsAsLines(kp, cn.calls = s1, lwd=2, add.axis=FALSE, labels = NA, ymin = min(limma_cnv$lrr), ymax = max(limma_cnv$lrr))
+kpAddChromosomeSeparators(kp, lwd=2, col = "#666666")
+kpAxis(kp, ymin = min(limma_cnv$lrr), ymax=max(limma_cnv$lrr), tick.pos = c(-0.5, -0.25, 0, 0.25, 0.5), cex=2.2)
+kpAddLabels(kp, labels = "CN", cex=3, srt=90, pos=3, label.margin = 0.025)
+dev.off()
