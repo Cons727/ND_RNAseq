@@ -1,0 +1,113 @@
+# ------- GSEA CTL.vs.AD -f -------
+library(msigdbr)
+library(clusterProfiler)
+
+m_df = msigdbr(species = "Homo sapiens", category = "C5")
+#head(m_df)
+m_t2g = m_df %>% dplyr::select(gs_name, human_gene_symbol) #%>% as.data.frame()
+
+msigdb_h_gs_names <- unique(m_df$gs_name)
+msigdb_h_list <- list()
+for(i in 1:length(msigdb_h_gs_names)){
+  msigdb_h_list[[i]] <- m_df$human_gene_symbol[which(m_df$gs_name == msigdb_h_gs_names[i])]
+}
+names(msigdb_h_list) <- msigdb_h_gs_names
+
+# Generate input data for enrich
+load("topTable_AD-Front-f.RData")
+genes <- limma_wo_de[,1] # Numeric vector
+names(genes) <- as.character(rownames(limma_wo_de)) # Named vector
+genes <- sort(genes, decreasing = TRUE) # Ordered list
+
+# Generate input data for gsea
+geneList <- limma_wo_f[, 1] # Numeric vector
+names(geneList) <- as.character(rownames(limma_wo_f)) # Named vector
+geneList <- sort(geneList, decreasing = TRUE) #Ordered list
+
+# Analysis
+library(clusterProfiler.dplyr)
+set.seed(1234)
+em <- GSEA(geneList, TERM2GENE = m_t2g, pvalueCutoff = 0.05, seed = TRUE, verbose = FALSE)
+#y <- mutate(em, ordering = abs(NES)) %>% arrange(desc(ordering))
+y2 <- arrange(em, desc(NES))
+em2 <- enricher(names(genes), TERM2GENE = m_t2g)
+#head(em2)
+
+# Visualization
+library(enrichplot)
+setwd("~/Thesis/Avances/Frontal/GSEA")
+
+png("CTLvsAD_ef_barplot.png", width = 20, height = 10, units = 'in', res = 200)
+barplot(em2, showCategory=20) # enrichment
+dev.off()
+
+png("CTLvsAD_ef_dotplot.png", width = 20, height = 10, units = 'in', res = 200)
+dotplot(y2, showCategory=20, title="GSEA") # GSEA
+dev.off()
+
+#n <- nrow(y2) for min NES
+# 1 for max NES
+png("CTLvsAD_ef_gseaplot.png", width = 20, height = 10, units = 'in', res = 200)
+gseaplot(y2, geneSetID=1, title = y2@result[["Description"]][1], ) # GSEA
+dev.off()
+
+png("CTLvsAD_ef_gsearank.png", width = 20, height = 10, units = 'in', res = 200)
+gsearank(y2, geneSetID=1, title = y2@result[["Description"]][1]) # GSEA
+dev.off()
+
+# ------- GSEA CTL.vs.AD -m -------
+library(msigdbr)
+library(clusterProfiler)
+
+m_df = msigdbr(species = "Homo sapiens", category = "C5")
+#head(m_df)
+m_t2g = m_df %>% dplyr::select(gs_name, human_gene_symbol) #%>% as.data.frame()
+
+msigdb_h_gs_names <- unique(m_df$gs_name)
+msigdb_h_list <- list()
+for(i in 1:length(msigdb_h_gs_names)){
+  msigdb_h_list[[i]] <- m_df$human_gene_symbol[which(m_df$gs_name == msigdb_h_gs_names[i])]
+}
+names(msigdb_h_list) <- msigdb_h_gs_names
+
+# Generate input data for enrich
+load("topTable_AD-Front-m.RData")
+genes <- limma_wo_de[,1] # Numeric vector
+names(genes) <- as.character(rownames(limma_wo_de)) # Named vector
+genes <- sort(genes, decreasing = TRUE) # Ordered list
+
+# Generate input data for gsea
+geneList <- limma_wo_m[, 1] # Numeric vector
+names(geneList) <- as.character(rownames(limma_wo_m)) # Named vector
+geneList <- sort(geneList, decreasing = TRUE) #Ordered list
+
+# Analysis
+library(clusterProfiler.dplyr)
+set.seed(1234)
+em <- GSEA(geneList, TERM2GENE = m_t2g, pvalueCutoff = 0.05, seed = TRUE, verbose = FALSE)
+#y <- mutate(em, ordering = abs(NES)) %>% arrange(desc(ordering))
+y2 <- arrange(em, desc(NES))
+em2 <- enricher(names(genes), TERM2GENE = m_t2g)
+#head(em2)
+
+# Visualization
+library(enrichplot)
+setwd("~/Thesis/Avances/Frontal/GSEA")
+
+png("CTLvsAD_em_barplot.png", width = 20, height = 10, units = 'in', res = 200)
+barplot(em2, showCategory=20) # enrichment
+dev.off()
+
+png("CTLvsAD_em_dotplot.png", width = 20, height = 10, units = 'in', res = 200)
+dotplot(y2, showCategory=20, title="GSEA") # GSEA
+dev.off()
+
+#n <- nrow(y2) for min NES
+# 1 for max NES
+png("CTLvsAD_em_gseaplot.png", width = 20, height = 10, units = 'in', res = 200)
+gseaplot(y2, geneSetID=1, title = y2@result[["Description"]][1], ) # GSEA
+dev.off()
+
+png("CTLvsAD_em_gsearank.png", width = 20, height = 10, units = 'in', res = 200)
+gsearank(y2, geneSetID=1, title = y2@result[["Description"]][1]) # GSEA
+dev.off()
