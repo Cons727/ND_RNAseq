@@ -1,0 +1,107 @@
+# ------- Use non negative matrix factorization to identify outliers -f ------
+# Female
+load("AD_HIP_mf_data.RData")
+library(dplyr)
+source('~/Thesis/Codes/Emmanuels/fileIO.R')
+AD_HIP_f_mad <- apply(AD_HIP_f, 1, mad)
+AD_HIP_f_for_NMF <- t(apply(AD_HIP_f[order(AD_HIP_f_mad, decreasing=T)[1:2000],], 1, scale))
+colnames(AD_HIP_f_for_NMF) <- colnames(AD_HIP_f)
+write.gct(mat=as.data.frame(AD_HIP_f_for_NMF), gct.file = "AD_HIP_f_dataset_for_NMF_2000.gct")
+save(AD_HIP_f_for_NMF, file="AD_HIP_f_dataset_for_NMF_2000.RData")
+
+###
+#NMF
+options(stringsAsFactors=F)
+setwd("NMF")
+source("nmfconsensus.R")
+load("AD_HIP_f_dataset_for_NMF_2000.RData")
+
+nmfconsensus(
+  input.ds =           "AD_HIP_f_dataset_for_NMF_2000.gct",
+  k.init =             2,
+  k.final =            4,
+  num.clusterings =    100,
+  maxniter =           1000,
+  error.function =     "euclidean",
+  rseed =              1234,
+  stopconv =           40,
+  stopfreq =           10,
+  non.interactive.run = F,
+  doc.string =         "AD_HIP_f_",
+  data = 				AD_HIP_f_for_NMF)
+###
+
+#Revise clusters
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/Hippocampus/")
+load("AD_HIP_mf_data.RData") 
+nmf_diver_cluster_f <- read.delim("~/Thesis/Avances/Hippocampus/AD_HIP_f_membership.gct")
+all(nmf_diver_cluster_f$Name == colnames(AD_HIP_f))
+a <- nmf_diver_cluster_f[grep('CTL', nmf_diver_cluster_f$Name),]
+length(which(a$membership == 1))
+length(which(a$membership == 2))
+a <- nmf_diver_cluster_f[grep('AD', nmf_diver_cluster_f$Name),]
+length(which(a$membership == 1))
+length(which(a$membership == 2))
+# 1 hay 16 ctl, 7 AD ---- 2 hay 6 ctl, 14 AD, Then 1=CTL, 2=AD
+
+AD_HIP_f_mad <- apply(AD_HIP_f, 1, mad)
+AD_HIP_f_pca <- prcomp(AD_HIP_f[order(AD_HIP_f_mad, decreasing=T)[1:2000],])
+AD_HIP_clinical_f$member_class <- ifelse(AD_HIP_clinical_f$disease == 1 & nmf_diver_cluster_f$membership == 1, 1, ifelse(AD_HIP_clinical_f$disease == 2 & nmf_diver_cluster_f$membership == 2, 2, 3))
+plot(x=AD_HIP_f_pca$rotation[,2], y=AD_HIP_f_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=AD_HIP_clinical_f$disease)
+plot(x=AD_HIP_f_pca$rotation[,2], y=AD_HIP_f_pca$rotation[,1], xlab= paste("PC 2 ", summary(AD_HIP_f_pca)$importance[2,2] * 100, "%", sep = " "), ylab= paste("PC 1 ", summary(AD_HIP_f_pca)$importance[2,1] * 100, "%", sep = " "), pch=19, col=AD_HIP_clinical_f$member_class,
+     main = "HIP-AD-f")
+
+# ------- Use non negative matrix factorization to identify outliers -m -------
+# Male
+load("AD_HIP_mf_data.RData")
+library(dplyr)
+source('~/Thesis/Codes/Emmanuels/fileIO.R')
+AD_HIP_m_mad <- apply(AD_HIP_m, 1, mad)
+AD_HIP_m_for_NMF <- t(apply(AD_HIP_m[order(AD_HIP_m_mad, decreasing=T)[1:2000],], 1, scale))
+colnames(AD_HIP_m_for_NMF) <- colnames(AD_HIP_m)
+write.gct(mat=as.data.frame(AD_HIP_m_for_NMF), gct.file = "AD_HIP_m_dataset_for_NMF_2000.gct")
+save(AD_HIP_m_for_NMF, file="AD_HIP_m_dataset_for_NMF_2000.RData")
+
+###
+#NMF
+options(stringsAsFactors=F)
+setwd("NMF")
+source("nmfconsensus.R")
+load("AD_HIP_m_dataset_for_NMF_2000.RData")
+
+nmfconsensus(
+  input.ds =           "AD_HIP_m_dataset_for_NMF_2000.gct",
+  k.init =             2,
+  k.final =            4,
+  num.clusterings =    100,
+  maxniter =           1000,
+  error.function =     "euclidean",
+  rseed =              1234,
+  stopconv =           40,
+  stopfreq =           10,
+  non.interactive.run = F,
+  doc.string =         "AD_HIP_m_",
+  data = 				AD_HIP_m_for_NMF)
+###
+
+#Revise clusters
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/Hippocampus/")
+load("AD_HIP_mf_data.RData") 
+nmf_diver_cluster_m <- read.delim("~/Thesis/Avances/Hippocampus/AD_HIP_m_membership.gct")
+all(nmf_diver_cluster_m$Name == colnames(AD_HIP_m))
+a <- nmf_diver_cluster_m[grep('CTL', nmf_diver_cluster_m$Name),]
+length(which(a$membership == 1))
+length(which(a$membership == 2))
+a <- nmf_diver_cluster_m[grep('AD', nmf_diver_cluster_m$Name),]
+length(which(a$membership == 1))
+length(which(a$membership == 2))
+# 1 hay 24 ctl, 9 AD ---- 2 hay 8 ctl, 10 AD, Then 1=CTL, 2=AD
+
+AD_HIP_m_mad <- apply(AD_HIP_m, 1, mad)
+AD_HIP_m_pca <- prcomp(AD_HIP_m[order(AD_HIP_m_mad, decreasing=T)[1:2000],])
+AD_HIP_clinical_m$member_class <- ifelse(AD_HIP_clinical_m$disease == 1 & nmf_diver_cluster_m$membership == 1, 1, ifelse(AD_HIP_clinical_m$disease == 2 & nmf_diver_cluster_m$membership == 2, 2, 3))
+plot(x=AD_HIP_m_pca$rotation[,2], y=AD_HIP_m_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=AD_HIP_clinical_m$disease)
+plot(x=AD_HIP_m_pca$rotation[,2], y=AD_HIP_m_pca$rotation[,1], xlab= paste("PC 2 ", summary(AD_HIP_m_pca)$importance[2,2] * 100, "%", sep = " "), ylab= paste("PC 1 ", summary(AD_HIP_m_pca)$importance[2,1] * 100, "%", sep = " "), pch=19, col=AD_HIP_clinical_m$member_class,
+     main = "HIP-AD-m")
