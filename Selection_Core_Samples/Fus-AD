@@ -1,0 +1,107 @@
+# ------- Use non negative matrix factorization to identify outliers -f -------
+# Female
+load("FUS_mf_data.RData")
+library(dplyr)
+source('~/Thesis/Codes/Emmanuels/fileIO.R')
+FUS_f_mad <- apply(FUS_f, 1, mad)
+FUS_f_for_NMF <- t(apply(FUS_f[order(FUS_f_mad, decreasing=T)[1:2000],], 1, scale))
+colnames(FUS_f_for_NMF) <- colnames(FUS_f)
+write.gct(mat=as.data.frame(FUS_f_for_NMF), gct.file = "FUS_f_dataset_for_NMF_2000.gct")
+save(FUS_f_for_NMF, file="FUS_f_dataset_for_NMF_2000.RData")
+
+###
+#NMF
+options(stringsAsFactors=F)
+setwd("NMF")
+source("nmfconsensus.R")
+load("FUS_f_dataset_for_NMF_2000.RData")
+
+nmfconsensus(
+  input.ds =           "FUS_f_dataset_for_NMF_2000.gct",
+  k.init =             2,
+  k.final =            4,
+  num.clusterings =    100,
+  maxniter =           1000,
+  error.function =     "euclidean",
+  rseed =              1234,
+  stopconv =           40,
+  stopfreq =           10,
+  non.interactive.run = F,
+  doc.string =         "FUS_f_",
+  data = 				FUS_f_for_NMF)
+###
+
+#Revise clusters
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/GSE125583/")
+load("FUS_mf_data.RData") 
+nmf_diver_cluster_f <- read.delim("~/Thesis/Avances/GSE125583/FUS_f_membership.gct")
+all(nmf_diver_cluster_f$Name == colnames(FUS_f))
+a <- nmf_diver_cluster_f[grep('CTL', nmf_diver_cluster_f$Name),]
+length(which(a$membership == 1))
+length(which(a$membership == 2))
+a <- nmf_diver_cluster_f[grep('AD', nmf_diver_cluster_f$Name),]
+length(which(a$membership == 1))
+length(which(a$membership == 2))
+# 1 hay 7 ctl, 65 AD ---- 2 hay 26 ctl, 32 AD, Then 1=AD, 2=CTL
+
+FUS_f_mad <- apply(FUS_f, 1, mad)
+FUS_f_pca <- prcomp(FUS_f[order(FUS_f_mad, decreasing=T)[1:2000],])
+FUS_clinical_f$member_class <- ifelse(FUS_clinical_f$Disease == 1 & nmf_diver_cluster_f$membership == 2, 1, ifelse(FUS_clinical_f$Disease == 2 & nmf_diver_cluster_f$membership == 1, 2, 3))
+plot(x=FUS_f_pca$rotation[,2], y=FUS_f_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=FUS_clinical_f$Disease)
+plot(x=FUS_f_pca$rotation[,2], y=FUS_f_pca$rotation[,1], xlab= paste("PC 2 ", summary(FUS_f_pca)$importance[2,2] * 100, "%", sep = " "), ylab= paste("PC 1 ", summary(FUS_f_pca)$importance[2,1] * 100, "%", sep = " "), pch=19, col=FUS_clinical_f$member_class,
+     main = "FUS-AD-f")
+
+# ------- Use non negative matrix factorization to identify outliers -m -------
+# Male
+load("FUS_mf_data.RData")
+library(dplyr)
+source('~/Thesis/Codes/Emmanuels/fileIO.R')
+FUS_m_mad <- apply(FUS_m, 1, mad)
+FUS_m_for_NMF <- t(apply(FUS_m[order(FUS_m_mad, decreasing=T)[1:2000],], 1, scale))
+colnames(FUS_m_for_NMF) <- colnames(FUS_m)
+write.gct(mat=as.data.frame(FUS_m_for_NMF), gct.file = "FUS_m_dataset_for_NMF_2000.gct")
+save(FUS_m_for_NMF, file="FUS_m_dataset_for_NMF_2000.RData")
+
+###
+#NMF
+options(stringsAsFactors=F)
+setwd("NMF")
+source("nmfconsensus.R")
+load("FUS_m_dataset_for_NMF_2000.RData")
+
+nmfconsensus(
+  input.ds =           "FUS_m_dataset_for_NMF_2000.gct",
+  k.init =             2,
+  k.final =            4,
+  num.clusterings =    100,
+  maxniter =           1000,
+  error.function =     "euclidean",
+  rseed =              1234,
+  stopconv =           40,
+  stopfreq =           10,
+  non.interactive.run = F,
+  doc.string =         "FUS_m_",
+  data = 				FUS_m_for_NMF)
+###
+
+#Revise clusters
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/GSE125583/")
+load("FUS_mf_data.RData") 
+nmf_diver_cluster_m <- read.delim("~/Thesis/Avances/GSE125583/FUS_m_membership.gct")
+all(nmf_diver_cluster_m$Name == colnames(FUS_m))
+a <- nmf_diver_cluster_m[grep('CTL', nmf_diver_cluster_m$Name),]
+length(which(a$membership == 1))
+length(which(a$membership == 2))
+a <- nmf_diver_cluster_m[grep('AD', nmf_diver_cluster_m$Name),]
+length(which(a$membership == 1))
+length(which(a$membership == 2))
+# 1 hay 8 ctl, 85 AD ---- 2 hay 29 ctl, 37 AD, Then 1=AD, 2=CTL
+
+FUS_m_mad <- apply(FUS_m, 1, mad)
+FUS_m_pca <- prcomp(FUS_m[order(FUS_m_mad, decreasing=T)[1:2000],])
+FUS_clinical_m$member_class <- ifelse(FUS_clinical_m$Disease == 1 & nmf_diver_cluster_m$membership == 2, 1, ifelse(FUS_clinical_m$Disease == 2 & nmf_diver_cluster_m$membership == 1, 2, 3))
+plot(x=FUS_m_pca$rotation[,2], y=FUS_m_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=FUS_clinical_m$Disease)
+plot(x=FUS_m_pca$rotation[,2], y=FUS_m_pca$rotation[,1], xlab= paste("PC 2 ", summary(FUS_m_pca)$importance[2,2] * 100, "%", sep = " "), ylab= paste("PC 1 ", summary(FUS_m_pca)$importance[2,1] * 100, "%", sep = " "), pch=19, col=FUS_clinical_m$member_class,
+     main = "FUS-AD-m")
