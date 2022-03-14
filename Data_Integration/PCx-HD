@@ -1,0 +1,51 @@
+# ------- Integrate datasets -------
+load("../GSE64810/GSE64810_data.RData")
+clinical_data_GSE64810 <- clinical_data
+data_GSE64810 <- x_norm_f
+
+load("~/Thesis/Avances/GSE129473/GSE1294273_data.RData")
+clinical_data_GSE129473 <- clinical_data
+clinical_data_GSE129473 <- clinical_data_GSE129473[grep("PCx", clinical_data_GSE129473$Tissue),]
+x_GSE129473 <- x_norm_f
+x_GSE129473 <- x_GSE129473[,grep("PCx", colnames(x_GSE129473))]
+
+#Common genes
+common_genes <- sort(intersect(rownames(data_GSE64810), rownames(x_GSE129473)))
+HD_PCx_dataset <- cbind(data_GSE64810[common_genes,], x_GSE129473[common_genes,])
+
+#Pre-processing
+png(filename = "HD-PCx-densities_before.png", width = 800, height = 800)
+plotDensities(HD_PCx_dataset, legend=F)
+dev.off()
+HD_PCx_dataset_qn <- normalize.quantiles(HD_PCx_dataset)
+colnames(HD_PCx_dataset_qn) <- colnames(HD_PCx_dataset)
+rownames(HD_PCx_dataset_qn) <- rownames(HD_PCx_dataset)
+png(filename = "HD-PCx-densities_after.png", width = 800, height = 800)
+plotDensities(HD_PCx_dataset_qn, legend=F)
+dev.off()
+
+HD_PCx_clinical <- data.frame(batch=c(rep(1, ncol(data_GSE64810)), rep(2, ncol(x_GSE129473))), disease=c(ifelse(clinical_data_GSE64810$Diagnosis == "Control", 1, 2), ifelse(clinical_data_GSE129473$Condition == "Control", 1, 2)))
+rownames(HD_PCx_clinical) <- c(rownames(clinical_data_GSE64810), rownames(clinical_data_GSE129473))
+
+#PCA
+HD_PCx_dataset_qn_mad <- apply(HD_PCx_dataset_qn, 1, mad)
+HD_PCx_dataset_qn_pca <- prcomp(HD_PCx_dataset_qn[order(HD_PCx_dataset_qn_mad, decreasing=T)[1:2000],])
+png("PCA_before_HD-PCx.png", width = 8, height = 8, units = 'in', res = 200)
+plot(x=HD_PCx_dataset_qn_pca$rotation[,2], y=HD_PCx_dataset_qn_pca$rotation[,1], ylab=paste("PC2 (", round(summary(HD_PCx_dataset_qn_pca)$importance[2,2]*100), "%)"), xlab=paste("PC1 (", round(summary(HD_PCx_dataset_qn_pca)$importance[2,1]*100), "%)"), pch=19, col=HD_PCx_clinical$batch, main="PCx-HD before ComBat")
+legend("bottomright", legend = c("Batch 1", "Batch 2"), col = c(1, 2), pch = 19, bty = "n", pt.cex = 2, cex = 1.5, inset = c(0.02, 0.02))
+dev.off()
+plot(x=HD_PCx_dataset_qn_pca$rotation[,2], y=HD_PCx_dataset_qn_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=HD_PCx_clinical$disease)
+
+#Combat
+modcombat <- model.matrix(~1, data=data.frame(cmb=HD_PCx_clinical$batch))
+HD_PCx_dataset_qn_combat <- ComBat(dat=HD_PCx_dataset_qn, batch=HD_PCx_clinical$batch, mod=modcombat, par.prior=TRUE, prior.plots=FALSE)
+HD_PCx_dataset_qn_combat_mad <- apply(HD_PCx_dataset_qn_combat, 1, mad)
+HD_PCx_dataset_qn_combat_pca <- prcomp(HD_PCx_dataset_qn_combat[order(HD_PCx_dataset_qn_combat_mad, decreasing=T)[1:2000],])
+png("PCA_after_HD-PCx.png", width = 8, height = 8, units = 'in', res = 200)
+plot(x=HD_PCx_dataset_qn_combat_pca$rotation[,2], y=HD_PCx_dataset_qn_combat_pca$rotation[,1], ylab=paste("PC2 (", round(summary(HD_PCx_dataset_qn_combat_pca)$importance[2,2]*100), "%)"), xlab=paste("PC1 (", round(summary(HD_PCx_dataset_qn_combat_pca)$importance[2,1]*100), "%)"), pch=19, col=HD_PCx_clinical$batch, main="PCx-HD after ComBat")
+legend("bottomright", legend = c("Batch 1", "Batch 2"), col = c(1, 2), pch = 19, bty = "n", pt.cex = 2, cex = 1.5, inset = c(0.02, 0.02))
+dev.off()
+plot(x=HD_PCx_dataset_qn_combat_pca$rotation[,2], y=HD_PCx_dataset_qn_combat_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=HD_PCx_clinical$disease)
+
+#Save HD_PCx compound dataset
+save(HD_PCx_dataset_qn_combat, HD_PCx_clinical, file="HD_PCx_data.RData")
