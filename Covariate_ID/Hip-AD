@@ -1,0 +1,23 @@
+#Limma for coefficients: Sex important only
+design2 <- model.matrix(~ 0 + disease + Age + Braak + Sex, data=AD_HIP_clinical)
+vfit2 <- lmFit(AD_HIP_dataset_qn_combat, design2)
+efit2 <- eBayes(vfit2)
+summary(decideTests(efit2))
+
+# ------- Divide by sex -------
+# Female
+AD_HIP_f <- AD_HIP_dataset_qn_combat[,which(AD_HIP_clinical$Sex == 'F')]
+AD_HIP_clinical_f <- AD_HIP_clinical[which(AD_HIP_clinical$Sex == 'F'),]
+AD_HIP_f_mad <- apply(AD_HIP_f, 1, mad)
+AD_HIP_f_pca <- prcomp(AD_HIP_f[order(AD_HIP_f_mad, decreasing=T)[1:2000],])
+plot(x=AD_HIP_f_pca$rotation[,1], y=AD_HIP_f_pca$rotation[,2], xlab="PC 1", ylab="PC 2", pch=19, col=AD_HIP_clinical_f$disease)
+
+# Male
+AD_HIP_m <- AD_HIP_dataset_qn_combat[,which(AD_HIP_clinical$Sex == 'M')]
+AD_HIP_clinical_m <- AD_HIP_clinical[which(AD_HIP_clinical$Sex == 'M'),]
+AD_HIP_m_mad <- apply(AD_HIP_m, 1, mad)
+AD_HIP_m_pca <- prcomp(AD_HIP_m[order(AD_HIP_m_mad, decreasing=T)[1:2000],])
+plot(x=AD_HIP_m_pca$rotation[,1], y=AD_HIP_m_pca$rotation[,2], xlab="PC 1", ylab="PC 2", pch=19, col=AD_HIP_clinical_m$disease)
+
+# Save
+save(AD_HIP_clinical_f, AD_HIP_clinical_m, AD_HIP_f, AD_HIP_m, file = "AD_HIP_mf_data.RData")
