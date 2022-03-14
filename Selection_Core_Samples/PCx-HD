@@ -1,0 +1,91 @@
+# ------- Use non negative matrix factorization to identify outliers -------
+load("HD_PCx_data.RData")
+library(dplyr)
+source('~/Thesis/Codes/Emmanuels/fileIO.R')
+HD_PCx_dataset_qn_combat_mad <- apply(HD_PCx_dataset_qn_combat, 1, mad)
+HD_PCx_for_NMF <- t(apply(HD_PCx_dataset_qn_combat[order(HD_PCx_dataset_qn_combat_mad, decreasing=T)[1:2000],], 1, scale))
+colnames(HD_PCx_for_NMF) <- colnames(HD_PCx_dataset_qn_combat)
+write.gct(mat=as.data.frame(HD_PCx_for_NMF), gct.file = "HD_PCx_dataset_for_NMF_2000.gct")
+save(HD_PCx_for_NMF, file="HD_PCx_dataset_for_NMF_2000.RData")
+
+###
+#NMF
+options(stringsAsFactors=F)
+setwd("NMF")
+source("nmfconsensus.R")
+load("HD_PCx_dataset_for_NMF_2000.RData")
+
+nmfconsensus(
+  input.ds =           "HD_PCx_dataset_for_NMF_2000.gct",
+  k.init =             2,
+  k.final =            4,
+  num.clusterings =    100,
+  maxniter =           1000,
+  error.function =     "euclidean",
+  rseed =              1234,
+  stopconv =           40,
+  stopfreq =           10,
+  non.interactive.run = F,
+  doc.string =         "HD_PCx_",
+  data = 				HD_PCx_for_NMF)
+###
+
+#Revise clusters
+options(stringsAsFactors=F)
+setwd("~/Thesis/Avances/PCx-HD/")
+load("HD_PCx_data.RData") 
+HD_PCx_consensus.k.2 <- read.delim("~/Thesis/Avances/PCx-HD/HD_PCx_consensus.k.2.gct")
+nmf_diver_cluster <- HD_PCx_consensus.k.2[match(rownames(HD_PCx_clinical), HD_PCx_consensus.k.2$Name),]
+# 1 hay 20 ctl, 22 HD ---- 2 hay 32 ctl, 7 HD, Then 1=HD, 2=CTL
+
+HD_PCx_dataset_qn_combat_mad <- apply(HD_PCx_dataset_qn_combat, 1, mad)
+HD_PCx_dataset_qn_combat_mad_pca <- prcomp(HD_PCx_dataset_qn_combat[order(HD_PCx_dataset_qn_combat_mad, decreasing=T)[1:2000],])
+HD_PCx_clinical$member_class <- ifelse(HD_PCx_clinical$disease == 1 & nmf_diver_cluster$membership == 2, 1, ifelse(HD_PCx_clinical$disease == 2 & nmf_diver_cluster$membership == 1, 2, 3))
+plot(x=HD_PCx_dataset_qn_combat_mad_pca$rotation[,2], y=HD_PCx_dataset_qn_combat_mad_pca$rotation[,1], xlab="PC 2", ylab="PC 1", pch=19, col=HD_PCx_clinical$disease)
+plot(x=HD_PCx_dataset_qn_combat_mad_pca$rotation[,2], y=HD_PCx_dataset_qn_combat_mad_pca$rotation[,1], xlab= paste("PC 2 ", summary(HD_PCx_dataset_qn_combat_mad_pca)$importance[2,2] * 100, "%", sep = " "), ylab= paste("PC 1 ", summary(HD_PCx_dataset_qn_combat_mad_pca)$importance[2,1] * 100, "%", sep = " "), pch=19, col=HD_PCx_clinical$member_class,
+     main = "PCx-HD")
+
+# ------- DE Limma -------
+limma_wo <- limma4DS_fdr(HD_PCx_dataset_qn_combat[,-which(HD_PCx_clinical$member_class == 3)], ifelse(HD_PCx_clinical$disease[-which(HD_PCx_clinical$member_class == 3)] == 1, 1, 0), classes_names=c("HD","Control"))
+limma_wo_up <- rownames(limma_wo)[which(limma_wo$logFC > 1 & limma_wo$q.value <= 0.05)]
+limma_wo_dw <- rownames(limma_wo)[which(limma_wo$logFC < -1 & limma_wo$q.value <= 0.05)]
+length(limma_wo_up) # 781 DE genes
+length(limma_wo_dw) # 1076 DE genes
+
+limma_wo_de <- limma_wo[which((limma_wo$logFC > 1.25 | limma_wo$logFC < -1.25) & limma_wo$q.value <= 0.05),]
+save(limma_wo_de, limma_wo, file="topTable_HD-PCx.RData")
+
+# Heatmap
+library(gplots)
+library(pheatmap)
+load("topTable_HD-PCx.RData")
+load("HD_PCx_NoOutliers.RData")
+all(colnames(HD_data) == rownames(HD))
+CTL.vs.HD.topgenes <- rownames(limma_wo_de)
+i <- which(rownames(HD_data) %in% CTL.vs.HD.topgenes)
+mycol <- colorpanel(15,"blue","white","red")
+myBreaks <- seq(-2, 2, length.out=16)
+heat <- t(scale(t(HD_data))) #scaling
+png("DE analysis/CTLvsHD-PCx_all.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(heat[i,], scale="none",
+          labRow=FALSE, labCol=colnames(HD_data),
+          col=mycol, trace="none", density.info="none",
+          ColSideColors=c("cornflowerblue","orange3")[HD$disease],
+          Colv = NULL, dendrogram="none", keysize=0.6, reorderfun=function(d,w) reorder(d, w, agglo.FUN=mean),
+          distfun=function(x) as.dist(1-cor(t(x))),
+          hclustfun=function(x) hclust(x, method="complete"),
+          breaks = myBreaks)
+dev.off()
+
+CTL.vs.HD.topgenes <- rownames(limma_wo_de[1:100,])
+i <- which(rownames(HD_data) %in% CTL.vs.HD.topgenes)
+mycol <- colorpanel(15,"blue","white","red")
+png("CTLvsHD-PCX_100.png", width = 30, height = 15, units = 'in', res = 300)
+heatmap.2(HD_data[i,], scale="row",
+          labRow=CTL.vs.HD.topgenes, labCol=colnames(HD_data),
+          col=mycol, trace="none", density.info="none",
+          ColSideColors=c("cornflowerblue","orange3")[HD$disease],
+          Colv = NULL, dendrogram="none", keysize=0.6, reorderfun=function(d,w) reorder(d, w, agglo.FUN=mean),
+          distfun=function(x) as.dist(1-cor(t(x))),
+          hclustfun=function(x) hclust(x, method="complete"))
+dev.off()
