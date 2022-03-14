@@ -1,0 +1,30 @@
+#Limma all
+limma_AD_Pa <- limma4DS_fdr(AD_TCx_dataset_qn_combat, AD_TCx_clinical$disease - 1, classes_names=c("AD","Control"))
+limma_AD_TCx_up <- rownames(limma_AD_Pa)[which(limma_AD_Pa$FC > 0 & limma_AD_Pa$q.value <= 0.05)]
+limma_AD_TCx_dw <- rownames(limma_AD_Pa)[which(limma_AD_Pa$FC < 0 & limma_AD_Pa$q.value <= 0.05)]
+length(limma_AD_TCx_up) # 0 DE genes
+length(limma_AD_TCx_dw) # 0 DE genes
+
+#Limma for coefficients: Sex and disease important only
+design2 <- model.matrix(~ 0 + disease + Age + Braak + Sex, data=AD_TCx_clinical)
+vfit2 <- lmFit(AD_TCx_dataset_qn_combat, design2)
+efit2 <- eBayes(vfit2)
+summary(decideTests(efit2))
+
+# ------- Divide by sex -------
+# Female
+AD_TCx_f <- AD_TCx_dataset_qn_combat[,which(AD_TCx_clinical$Sex == 'F')]
+AD_TCx_clinical_f <- AD_TCx_clinical[which(AD_TCx_clinical$Sex == 'F'),]
+AD_TCx_f_mad <- apply(AD_TCx_f, 1, mad)
+AD_TCx_f_pca <- prcomp(AD_TCx_f[order(AD_TCx_f_mad, decreasing=T)[1:2000],])
+plot(x=AD_TCx_f_pca$rotation[,1], y=AD_TCx_f_pca$rotation[,2], xlab="PC 1", ylab="PC 2", pch=19, col=AD_TCx_clinical_f$disease)
+
+# Male
+AD_TCx_m <- AD_TCx_dataset_qn_combat[,which(AD_TCx_clinical$Sex == 'M')]
+AD_TCx_clinical_m <- AD_TCx_clinical[which(AD_TCx_clinical$Sex == 'M'),]
+AD_TCx_m_mad <- apply(AD_TCx_m, 1, mad)
+AD_TCx_m_pca <- prcomp(AD_TCx_m[order(AD_TCx_m_mad, decreasing=T)[1:2000],])
+plot(x=AD_TCx_m_pca$rotation[,1], y=AD_TCx_m_pca$rotation[,2], xlab="PC 1", ylab="PC 2", pch=19, col=AD_TCx_clinical_m$disease)
+
+# Save
+save(AD_TCx_clinical_f, AD_TCx_clinical_m, AD_TCx_f, AD_TCx_m, file = "AD_TCx_mf_data.RData")
