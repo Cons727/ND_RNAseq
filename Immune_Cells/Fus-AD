@@ -89,3 +89,246 @@ blood_data_f_cibersort <- cbind(gene, blood_data_two)
 
 save(blood_data_two, file = "AD_FUS_Sub2_m_NoOutliers.RData")
 write.table(blood_data_f_cibersort, file = "FUS_AD_Sub2_m_matrix.txt", sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+# ------- CIBERSORT immune cells GSE125583 AD-FUS-f -------
+library(limma)
+
+setwd("~/Thesis/Avances/GSE125583")
+load("~/Thesis/Avances/GSE125583/AD_FUS_f_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/GSE125583/CIBERSORTx_Job13_f_Adjusted.txt")
+
+x <- as.data.frame(FUS_data_f)
+x <- log2(x + 1)
+
+all(rownames(f) == CIBERSORTx$Mixture) # [1] TRUE
+md <- cbind(CIBERSORTx[,c(-1,-24,-25,-26)], f)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$Disease == 2)]
+  ctl <- md[, i][which(md$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)[c(-1,-24,-25,-26)]
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "immuneCells_AD-FUS_f.RData")
+
+# ------- CIBERSORT immune cells GSE125583 AD-FUS-m -------
+library(limma)
+
+setwd("~/Thesis/Avances/GSE125583")
+load("~/Thesis/Avances/GSE125583/AD_FUS_m_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/GSE125583/CIBERSORTx_Job14_m_Adjusted.txt")
+
+x <- as.data.frame(FUS_data_m)
+x <- log2(x + 1)
+
+all(rownames(m) == CIBERSORTx$Mixture) # [1] TRUE
+md <- cbind(CIBERSORTx[,c(-1,-24,-25,-26)], m)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$Disease == 2)]
+  ctl <- md[, i][which(md$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)[c(-1,-24,-25,-26)]
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "immuneCells_AD-FUS_m.RData")
+
+# ------- CIBERSORT immune cells GSE125583 AD-FUS-Sub1-f -------
+library(limma)
+
+setwd("~/Thesis/Avances/GSE125583")
+load("~/Thesis/Avances/GSE125583/AD_FUS_f_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/GSE125583/CIBERSORTx_Job23_Sub1-f_Adjusted.txt")
+CIBER_ctl <- read.delim("~/Thesis/Avances/GSE125583/CIBERSORTx_Job13_f_Adjusted.txt")
+
+case <- data.frame(Disease = rep(2, nrow(CIBERSORTx)), row.names = CIBERSORTx$Mixture)
+ctrl <- data.frame(Disease = rep(1, nrow(f[f$Disease == 1, ])), row.names = rownames(f[f$Disease == 1, ]))
+f <- rbind(ctrl, case)
+CIBER_ctl <- CIBER_ctl[match(rownames(ctrl), CIBER_ctl$Mixture), ]
+rownames(CIBER_ctl) <- CIBER_ctl$Mixture
+CIBER_ctl <- CIBER_ctl[, c(-1,-24,-25,-26)]
+rownames(CIBERSORTx) <- CIBERSORTx$Mixture
+CIBERSORTx <- CIBERSORTx[, c(-1,-24,-25,-26)]
+samples <- rbind(CIBER_ctl, CIBERSORTx)
+
+all(rownames(f) == rownames(samples))
+md <- cbind(samples, f)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$Disease == 2)]
+  ctl <- md[, i][which(md$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "immuneCells_AD-FUS_Sub1_f.RData")
+
+# ------- CIBERSORT immune cells GSE125583 AD-FUS-Sub2-f -------
+library(limma)
+
+setwd("~/Thesis/Avances/GSE125583")
+load("~/Thesis/Avances/GSE125583/AD_FUS_f_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/GSE125583/CIBERSORTx_Job25_Sub2-f_Adjusted.txt")
+CIBER_ctl <- read.delim("~/Thesis/Avances/GSE125583/CIBERSORTx_Job13_f_Adjusted.txt")
+
+case <- data.frame(Disease = rep(2, nrow(CIBERSORTx)), row.names = CIBERSORTx$Mixture)
+ctrl <- data.frame(Disease = rep(1, nrow(f[f$Disease == 1, ])), row.names = rownames(f[f$Disease == 1, ]))
+f <- rbind(ctrl, case)
+CIBER_ctl <- CIBER_ctl[match(rownames(ctrl), CIBER_ctl$Mixture), ]
+rownames(CIBER_ctl) <- CIBER_ctl$Mixture
+CIBER_ctl <- CIBER_ctl[, c(-1,-24,-25,-26)]
+rownames(CIBERSORTx) <- CIBERSORTx$Mixture
+CIBERSORTx <- CIBERSORTx[, c(-1,-24,-25,-26)]
+samples <- rbind(CIBER_ctl, CIBERSORTx)
+
+all(rownames(f) == rownames(samples))
+md <- cbind(samples, f)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$Disease == 2)]
+  ctl <- md[, i][which(md$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "immuneCells_AD-FUS_Sub2_f.RData")
+
+# ------- CIBERSORT immune cells GSE125583 AD-FUS-Sub3-f -------
+library(limma)
+
+setwd("~/Thesis/Avances/GSE125583")
+load("~/Thesis/Avances/GSE125583/AD_FUS_f_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/GSE125583/CIBERSORTx_Job24_Sub3-f_Adjusted.txt")
+CIBER_ctl <- read.delim("~/Thesis/Avances/GSE125583/CIBERSORTx_Job13_f_Adjusted.txt")
+
+case <- data.frame(Disease = rep(2, nrow(CIBERSORTx)), row.names = CIBERSORTx$Mixture)
+ctrl <- data.frame(Disease = rep(1, nrow(f[f$Disease == 1, ])), row.names = rownames(f[f$Disease == 1, ]))
+f <- rbind(ctrl, case)
+CIBER_ctl <- CIBER_ctl[match(rownames(ctrl), CIBER_ctl$Mixture), ]
+rownames(CIBER_ctl) <- CIBER_ctl$Mixture
+CIBER_ctl <- CIBER_ctl[, c(-1,-24,-25,-26)]
+rownames(CIBERSORTx) <- CIBERSORTx$Mixture
+CIBERSORTx <- CIBERSORTx[, c(-1,-24,-25,-26)]
+samples <- rbind(CIBER_ctl, CIBERSORTx)
+
+all(rownames(f) == rownames(samples))
+md <- cbind(samples, f)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$Disease == 2)]
+  ctl <- md[, i][which(md$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "immuneCells_AD-FUS_Sub3_f.RData")
+
+# ------- CIBERSORT immune cells GSE125583 AD-FUS-Sub1-m -------
+library(limma)
+
+setwd("~/Thesis/Avances/GSE125583")
+load("~/Thesis/Avances/GSE125583/AD_FUS_m_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/GSE125583/CIBERSORTx_Job27_Sub1-m_Adjusted.txt")
+CIBER_ctl <- read.delim("~/Thesis/Avances/GSE125583/CIBERSORTx_Job14_m_Adjusted.txt")
+
+case <- data.frame(Disease = rep(2, nrow(CIBERSORTx)), row.names = CIBERSORTx$Mixture)
+ctrl <- data.frame(Disease = rep(1, nrow(m[m$Disease == 1, ])), row.names = rownames(m[m$Disease == 1, ]))
+f <- rbind(ctrl, case)
+CIBER_ctl <- CIBER_ctl[match(rownames(ctrl), CIBER_ctl$Mixture), ]
+rownames(CIBER_ctl) <- CIBER_ctl$Mixture
+CIBER_ctl <- CIBER_ctl[, c(-1,-24,-25,-26)]
+rownames(CIBERSORTx) <- CIBERSORTx$Mixture
+CIBERSORTx <- CIBERSORTx[, c(-1,-24,-25,-26)]
+samples <- rbind(CIBER_ctl, CIBERSORTx)
+
+all(rownames(f) == rownames(samples))
+md <- cbind(samples, f)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$Disease == 2)]
+  ctl <- md[, i][which(md$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "immuneCells_AD-FUS_Sub1_m.RData")
+
+# ------- CIBERSORT immune cells GSE125583 AD-FUS-Sub2-m -------
+library(limma)
+
+setwd("~/Thesis/Avances/GSE125583")
+load("~/Thesis/Avances/GSE125583/AD_FUS_m_NoOutliers.RData")
+CIBERSORTx <- read.delim("~/Thesis/Avances/GSE125583/CIBERSORTx_Job26_Sub2-m_Adjusted.txt")
+CIBER_ctl <- read.delim("~/Thesis/Avances/GSE125583/CIBERSORTx_Job14_m_Adjusted.txt")
+
+case <- data.frame(Disease = rep(2, nrow(CIBERSORTx)), row.names = CIBERSORTx$Mixture)
+ctrl <- data.frame(Disease = rep(1, nrow(m[m$Disease == 1, ])), row.names = rownames(m[m$Disease == 1, ]))
+f <- rbind(ctrl, case)
+CIBER_ctl <- CIBER_ctl[match(rownames(ctrl), CIBER_ctl$Mixture), ]
+rownames(CIBER_ctl) <- CIBER_ctl$Mixture
+CIBER_ctl <- CIBER_ctl[, c(-1,-24,-25,-26)]
+rownames(CIBERSORTx) <- CIBERSORTx$Mixture
+CIBERSORTx <- CIBERSORTx[, c(-1,-24,-25,-26)]
+samples <- rbind(CIBER_ctl, CIBERSORTx)
+
+all(rownames(f) == rownames(samples))
+md <- cbind(samples, f)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,22)){
+  ad <- md[, i][which(md$Disease == 2)]
+  ctl <- md[, i][which(md$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(CIBERSORTx)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+save(res, CIBERSORTx, file = "immuneCells_AD-FUS_Sub2_m.RData")
