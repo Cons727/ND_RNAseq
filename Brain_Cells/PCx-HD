@@ -1,0 +1,42 @@
+# ------ BRETIGEA Analysis for HD-PCx -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/PCx-HD")
+load("~/Thesis/Avances/PCx-HD/HD_PCx_NoOutliers.RData")
+
+x <- as.data.frame(HD_data)
+x <- log2(x + 1)
+#str(x, list.len = 5)
+#str(HD, list.len = 5)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+# ------ Evaluate the effect of cell deconvolution ------
+library(limma)
+all(rownames(HD) == rownames(ct_res)) # [1] TRUE
+md <- cbind(HD, ct_res)
+
+#Limma for coefficients: end, oli (less), opc, disease are important
+design2 <- model.matrix(~ 0 + ast + end + mic + neu + oli + opc + disease, data=md)
+vfit2 <- lmFit(x, design2)
+efit2 <- eBayes(vfit2)
+summary(decideTests(efit2))
+
+# t-test between Control and AD
+res <- data.frame(HD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(md$disease == 2)]
+  ctl <- ct_res[, i][which(md$disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/PCx-HD/brainCells_HD-PCx.RData")
+save(res, ct_res, file = "brainCells_HD-PCx.RData")
