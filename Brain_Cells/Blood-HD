@@ -1,0 +1,280 @@
+# ------ BRETIGEA Analysis for HD-Blood-f -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/Blood")
+load("~/Thesis/Avances/Blood/HD_blood_f_NoOutliers.RData")
+
+x <- as.data.frame(blood_data_f)
+x <- log2(x + 1)
+#str(x, list.len = 5)
+#str(bHD_f, list.len = 5)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+# ------ Evaluate the effect of cell deconvolution ------
+library(limma)
+all(rownames(bHD_f) == rownames(ct_res)) # [1] TRUE
+md <- cbind(bHD_f, ct_res)
+
+#Limma for coefficients: none are important
+design2 <- model.matrix(~ 0 + ast + end + mic + neu + oli + opc, data=md)
+vfit2 <- lmFit(x, design2)
+efit2 <- eBayes(vfit2)
+summary(decideTests(efit2))
+
+# t-test between Control and AD
+res <- data.frame(HD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(md$disease == 2)]
+  ctl <- ct_res[, i][which(md$disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/Blood/Cell Proportions/brainCells_HD-blood_f.RData")
+save(res, ct_res, file = "Cell Proportions/brainCells_HD-blood_f.RData")
+
+
+# ------ BRETIGEA Analysis for HD-Blood-m -------
+library(BRETIGEA, quietly = TRUE)
+setwd("~/Thesis/Avances/Blood")
+load("~/Thesis/Avances/Blood/HD_blood_m_NoOutliers.RData")
+
+x <- as.data.frame(blood_data_m)
+x <- log2(x + 1)
+#str(x, list.len = 5)
+#str(bHD_m, list.len = 5)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+# ------ Evaluate the effect of cell deconvolution ------
+library(limma)
+all(rownames(bHD_m) == rownames(ct_res)) # [1] TRUE
+md <- cbind(bHD_m, ct_res)
+
+#Limma for coefficients: none are important
+design2 <- model.matrix(~ 0 + ast + end + mic + neu + oli + opc, data=md)
+vfit2 <- lmFit(x, design2)
+efit2 <- eBayes(vfit2)
+summary(decideTests(efit2))
+
+# t-test between Control and AD
+res <- data.frame(HD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(md$disease == 2)]
+  ctl <- ct_res[, i][which(md$disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/Blood/Cell Proportions/brainCells_HD-blood_m.RData")
+save(res, ct_res, file = "Cell Proportions/brainCells_HD-blood_m.RData")
+
+# ------ BRETIGEA Analysis for HD-blood Sub1-f -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/Blood")
+load("~/Thesis/Avances/Blood/HD_blood_Sub1_f_NoOutliers.RData")
+load("~/Thesis/Avances/Blood/HD_blood_f_NoOutliers.RData")
+
+case <- data.frame(Disease = rep(2, ncol(blood_data_one)), row.names = colnames(blood_data_one))
+ctrl <- data.frame(Disease = rep(1, nrow(bHD_f[bHD_f$disease == 1, ])), row.names = rownames(bHD_f[bHD_f$disease == 1, ]))
+samples <- rbind(ctrl, case)
+mdata <- blood_data_f[, match(rownames(samples), colnames(blood_data_f))]
+
+x <- as.data.frame(mdata)
+x <- log2(x + 1)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+all(colnames(mdata) == rownames(ct_res))
+mdata <- cbind(samples, ct_res)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(mdata$Disease == 2)]
+  ctl <- ct_res[, i][which(mdata$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/Blood/Cell Proportions/brainCells_HD_blood_Sub1_f.RData")
+save(res, ct_res, file = "brainCells_HD_blood_Sub1_f.RData")
+
+# ------ BRETIGEA Analysis for HD-blood Sub2-f -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/Blood")
+load("~/Thesis/Avances/Blood/HD_blood_Sub2_f_NoOutliers.RData")
+load("~/Thesis/Avances/Blood/HD_blood_f_NoOutliers.RData")
+
+case <- data.frame(Disease = rep(2, ncol(blood_data_two)), row.names = colnames(blood_data_two))
+ctrl <- data.frame(Disease = rep(1, nrow(bHD_f[bHD_f$disease == 1, ])), row.names = rownames(bHD_f[bHD_f$disease == 1, ]))
+samples <- rbind(ctrl, case)
+mdata <- blood_data_f[, match(rownames(samples), colnames(blood_data_f))]
+
+x <- as.data.frame(mdata)
+x <- log2(x + 1)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+all(colnames(mdata) == rownames(ct_res))
+mdata <- cbind(samples, ct_res)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(mdata$Disease == 2)]
+  ctl <- ct_res[, i][which(mdata$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/Blood/Cell Proportions/brainCells_HD_blood_Sub2_f.RData")
+save(res, ct_res, file = "brainCells_HD_blood_Sub2_f.RData")
+
+# ------ BRETIGEA Analysis for HD-blood Sub3-f -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/Blood")
+load("~/Thesis/Avances/Blood/HD_blood_Sub3_f_NoOutliers.RData")
+load("~/Thesis/Avances/Blood/HD_blood_f_NoOutliers.RData")
+
+case <- data.frame(Disease = rep(2, ncol(blood_data_three)), row.names = colnames(blood_data_three))
+ctrl <- data.frame(Disease = rep(1, nrow(bHD_f[bHD_f$disease == 1, ])), row.names = rownames(bHD_f[bHD_f$disease == 1, ]))
+samples <- rbind(ctrl, case)
+mdata <- blood_data_f[, match(rownames(samples), colnames(blood_data_f))]
+
+x <- as.data.frame(mdata)
+x <- log2(x + 1)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+all(colnames(mdata) == rownames(ct_res))
+mdata <- cbind(samples, ct_res)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(mdata$Disease == 2)]
+  ctl <- ct_res[, i][which(mdata$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/Blood/Cell Proportions/brainCells_HD_blood_Sub3_f.RData")
+save(res, ct_res, file = "brainCells_HD_blood_Sub3_f.RData")
+
+# ------ BRETIGEA Analysis for HD-blood Sub1-m -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/Blood")
+load("~/Thesis/Avances/Blood/HD_blood_Sub1_m_NoOutliers.RData")
+load("~/Thesis/Avances/Blood/HD_blood_m_NoOutliers.RData")
+
+case <- data.frame(Disease = rep(2, ncol(blood_data_one)), row.names = colnames(blood_data_one))
+ctrl <- data.frame(Disease = rep(1, nrow(bHD_m[bHD_m$disease == 1, ])), row.names = rownames(bHD_m[bHD_m$disease == 1, ]))
+samples <- rbind(ctrl, case)
+mdata <- blood_data_m[, match(rownames(samples), colnames(blood_data_m))]
+
+x <- as.data.frame(mdata)
+x <- log2(x + 1)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+all(colnames(mdata) == rownames(ct_res))
+mdata <- cbind(samples, ct_res)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(mdata$Disease == 2)]
+  ctl <- ct_res[, i][which(mdata$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/Blood/Cell Proportions/brainCells_HD_blood_Sub1_m.RData")
+save(res, ct_res, file = "brainCells_HD_blood_Sub1_m.RData")
+
+# ------ BRETIGEA Analysis for HD-blood Sub2-m -------
+library(BRETIGEA, quietly = TRUE)
+
+setwd("~/Thesis/Avances/Blood")
+load("~/Thesis/Avances/Blood/HD_blood_Sub2_m_NoOutliers.RData")
+load("~/Thesis/Avances/Blood/HD_blood_m_NoOutliers.RData")
+
+case <- data.frame(Disease = rep(2, ncol(blood_data_two)), row.names = colnames(blood_data_two))
+ctrl <- data.frame(Disease = rep(1, nrow(bHD_m[bHD_m$disease == 1, ])), row.names = rownames(bHD_m[bHD_m$disease == 1, ]))
+samples <- rbind(ctrl, case)
+mdata <- blood_data_m[, match(rownames(samples), colnames(blood_data_m))]
+
+x <- as.data.frame(mdata)
+x <- log2(x + 1)
+
+# Relative cell type proportion estimation
+# Default is singular value decomposition
+ct_res <- brainCells(x, nMarker = 50, species = 'human')
+
+all(colnames(mdata) == rownames(ct_res))
+mdata <- cbind(samples, ct_res)
+
+# t-test between Control and AD
+res <- data.frame(AD.mean=double(), Control.mean=double(), P.value=double(), T.stat=double())
+
+for (i in seq(1,6)){
+  ad <- ct_res[, i][which(mdata$Disease == 2)]
+  ctl <- ct_res[, i][which(mdata$Disease == 1)]
+  ad_mean <- mean(ad)
+  ctl_mean <- mean(ctl)
+  ttest <- t.test(ad, ctl)
+  res[i,] <- c(ad_mean, ctl_mean, ttest$p.value, ttest$statistic)
+}
+rownames(res) <- colnames(ct_res)
+res$p.adj <- p.adjust(res$P.value, method = "fdr")
+
+#load("~/Thesis/Avances/Blood/Cell Proportions/brainCells_HD_blood_Sub2_m.RData")
+save(res, ct_res, file = "brainCells_HD_blood_Sub2_m.RData")
