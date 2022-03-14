@@ -1,0 +1,30 @@
+#Limma all
+limma_AD_Pa <- limma4DS_fdr(AD_Pa_dataset_qn_combat, AD_Pa_clinical$disease - 1, classes_names=c("AD","Control"))
+limma_AD_Pa_up <- rownames(limma_AD_Pa)[which(limma_AD_Pa$FC > 0 & limma_AD_Pa$q.value <= 0.05)]
+limma_AD_Pa_dw <- rownames(limma_AD_Pa)[which(limma_AD_Pa$FC < 0 & limma_AD_Pa$q.value <= 0.05)]
+length(limma_AD_Pa_up) # 0 DE genes
+length(limma_AD_Pa_dw) # 0 DE genes
+
+#Limma for coefficients: Sex important only
+design2 <- model.matrix(~ 0 + disease + Age + Braak + Sex, data=AD_Pa_clinical)
+vfit2 <- lmFit(AD_Pa_dataset_qn_combat, design2)
+efit2 <- eBayes(vfit2)
+summary(decideTests(efit2))
+
+# ------- Divide by sex -------
+# Female
+AD_Pa_f <- AD_Pa_dataset_qn_combat[,which(AD_Pa_clinical$Sex == 'F')]
+AD_Pa_clinical_f <- AD_Pa_clinical[which(AD_Pa_clinical$Sex == 'F'),]
+AD_Pa_f_mad <- apply(AD_Pa_f, 1, mad)
+AD_Pa_f_pca <- prcomp(AD_Pa_f[order(AD_Pa_f_mad, decreasing=T)[1:2000],])
+plot(x=AD_Pa_f_pca$rotation[,1], y=AD_Pa_f_pca$rotation[,2], xlab="PC 1", ylab="PC 2", pch=19, col=AD_Pa_clinical_f$disease)
+
+# Male
+AD_Pa_m <- AD_Pa_dataset_qn_combat[,which(AD_Pa_clinical$Sex == 'M')]
+AD_Pa_clinical_m <- AD_Pa_clinical[which(AD_Pa_clinical$Sex == 'M'),]
+AD_Pa_m_mad <- apply(AD_Pa_m, 1, mad)
+AD_Pa_m_pca <- prcomp(AD_Pa_m[order(AD_Pa_m_mad, decreasing=T)[1:2000],])
+plot(x=AD_Pa_m_pca$rotation[,1], y=AD_Pa_m_pca$rotation[,2], xlab="PC 1", ylab="PC 2", pch=19, col=AD_Pa_clinical_m$disease)
+
+# Save
+save(AD_Pa_clinical_f, AD_Pa_clinical_m, AD_Pa_f, AD_Pa_m, file = "AD_Pa_mf_data.RData")
