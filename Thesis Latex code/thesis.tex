@@ -1,0 +1,76 @@
+%% Some options to customize your document include:
+%% masters / phd
+%% oneside / twoside
+%% openright
+\documentclass[12pt, masters, twoside, openright]{MCCi-DCC-Thesis}
+\usepackage[utf8]{inputenc}
+\usepackage{lipsum}
+\usepackage{multirow, tabularx}
+\usepackage{booktabs}
+\usepackage{subfig}
+\usepackage{pdfpages}
+%\usepackage[pdftex]{graphicx}
+
+\begin{document}
+
+%% Definition of variables and values
+\newcolumntype{L}[1]{>{\scriptsize\raggedright\arraybackslash}m{#1}}
+\newcolumntype{C}[1]{>{\scriptsize\centering\arraybackslash}m{#1}}
+\newcolumntype{R}[1]{>{\scriptsize\raggedleft\arraybackslash}m{#1}}
+%% ================================================
+\title{Pathway Identification and Drug Repurposing for Neurodegenerative Diseases: A Public RNA-seq Data Strategy}
+\author{Constanza Marini Macouzet}
+\month{June}
+\year{2021}
+\campus{Estado de México}
+\advisor{Ph.D. Juan Emmanuel Martínez Ledesma}
+\advisorInstitution{Tecnológico de Monterrey}
+%% Uncomment in case you have a co-advisor
+%\coAdvisor{Co-advisor's name}
+%\coAdvisorInstitution{Co-advisor's Institution}
+\committeeMemberA{Ph.D. Víctor Manuel Treviño Alvaradao}
+\committeeMemberAInstitution{Tecnológico de Monterrey}
+\committeeMemberB{Ph.D. Raquel Cuevas Díaz Durán}
+\committeeMemberBInstitution{Tecnológico de Monterrey}
+\committeeMemberC{Ph.D. Raúl Aguirre Gamboa}
+\committeeMemberCInstitution{University of Chicago}
+%% The fourth Committee member is only used for Phd dissertations
+\committeeMemberD{Fourth Committee Member's name}
+\committeeMemberDInstitution{Fourth Committee Member's institution}
+\associateDean{Ph.D. Raúl Monroy Borja}
+%% ================================================
+
+\insertCover
+\insertSignaturePage
+\insertDeclaration
+\insertDedication{dedication.tex}
+\insertAcknowledgements{acknowledgements.tex}
+\insertAbstract{abstract.tex}
+\contents
+\mainMatter
+
+
+\insertChapter{chapter01.tex}
+
+\insertChapter{chapter02.tex}
+
+\insertChapter{chapter03.tex}
+
+\insertChapter{chapter04.tex}
+
+\insertChapter{chapter05.tex}
+
+\appendix
+\insertChapter{abb.tex}
+\insertChapter{appendixA.tex}
+\insertChapter{appendixB.tex}
+\insertChapter{appendixC.tex}
+\insertChapter{appendixD.tex}
+\insertChapter{appendixE.tex}
+\insertChapter{appendixF.tex}
+
+\insertBibliography{references}
+
+%\insertVita{vita.tex}
+
+\end{document}
